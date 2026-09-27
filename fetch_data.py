@@ -155,6 +155,18 @@ def from_stooq(sym, since_yyyymmdd):
     return (rows, None) if len(rows) >= 20 else (None, "stooq: データなし")
 
 
+def drop_spikes(rows):
+    """前後両方の値から30%以上外れた単発の異常値を除く（データ元のノイズ対策）"""
+    out = []
+    for i, r in enumerate(rows):
+        if 0 < i < len(rows) - 1:
+            p, n = rows[i - 1][1], rows[i + 1][1]
+            if abs(r[1] / p - 1) > 0.3 and abs(r[1] / n - 1) > 0.3:
+                continue
+        out.append(r)
+    return out
+
+
 def main():
     out_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data.json")
     old = {}
@@ -179,6 +191,7 @@ def main():
                 break
             errs.append(err)
         if rows is not None:
+            rows = drop_spikes(rows)
             out["series"][key] = {"ok": True, "source": src, "rows": rows}
             print(f"{key}: {len(rows)} rows ({src}) 最新 {rows[-1]}")
         elif key in old and old[key].get("ok"):
