@@ -156,12 +156,13 @@ def from_stooq(sym, since_yyyymmdd):
 
 
 def drop_spikes(rows):
-    """前後両方の値から30%以上外れた単発の異常値を除く（データ元のノイズ対策）"""
+    """直近5点（採用済み）の中央値から30%以上外れた値を除く（データ元のノイズ対策。桁ずれ等）"""
     out = []
-    for i, r in enumerate(rows):
-        if 0 < i < len(rows) - 1:
-            p, n = rows[i - 1][1], rows[i + 1][1]
-            if abs(r[1] / p - 1) > 0.3 and abs(r[1] / n - 1) > 0.3:
+    for r in rows:
+        recent = sorted(x[1] for x in out[-5:])
+        if len(recent) >= 3:
+            med = recent[len(recent) // 2]
+            if abs(r[1] / med - 1) > 0.3:
                 continue
         out.append(r)
     return out
