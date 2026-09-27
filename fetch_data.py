@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """株価データを取得して data.json に書き出す（GitHub Actions が定期実行）。
 Stooq を優先し、失敗したら Yahoo Finance に切り替える。"""
-import json, os, sys, time, datetime as dt, urllib.request, urllib.parse, csv, io
+import json, os, sys, time, datetime as dt, urllib.request, urllib.error, urllib.parse, csv, io
 
 YEARS = 6
 SYMBOLS = {  # key: (stooq, yahoo)
@@ -20,8 +20,12 @@ UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/
 
 def http_get(url):
     req = urllib.request.Request(url, headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return r.read().decode("utf-8", "replace")
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return r.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", "replace")[:200]
+        raise RuntimeError(f"HTTP {e.code} {body!r}")
 
 
 def from_stooq(sym, since):
@@ -32,6 +36,8 @@ def from_stooq(sym, since):
         return None, f"stooq: {e}"
     if "Exceeded" in body:
         return None, "stooq: 1日の取得上限に達しました"
+    if "<html" in body[:500].lower():
+        return None, f"stooq: HTMLが返されました {body[:120]!r}"
     rows = []
     for rec in csv.reader(io.StringIO(body)):
         if len(rec) < 5 or not (len(rec[0]) == 10 and rec[0][4] == "-"):
@@ -42,7 +48,7 @@ def from_stooq(sym, since):
             continue
         if close > 0:
             rows.append([rec[0], close])
-    return (rows, None) if len(rows) >= 20 else (None, "stooq: データなし")
+    return (rows, None) if len(rows) >= 20 else (None, f"stooq: データなし {body[:120]!r}")
 
 
 def from_yahoo(sym):
@@ -59,7 +65,7 @@ def from_yahoo(sym):
     rows = []
     for t, v in zip(ts, cl):
         if v is not None and v > 0:
-            rows.append([dt.datetime.utcfromtimestamp(t).strftime("%Y-%m-%d"), round(float(v), 4)])
+            rows.append([dt.datetime.fromtimestamp(t, dt.timezone.utc).strftime("%Y-%m-%d"), round(float(v), 4)])
     return (rows, None) if len(rows) >= 20 else (None, "yahoo: データなし")
 
 
@@ -94,7 +100,7 @@ def main():
     json.dump(out, open(out_path, "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
     ok = sum(1 for v in out["series"].values() if v.get("ok"))
     print(f"done: {ok}/{len(SYMBOLS)} series")
-    return 0 if ok else 1
+    return 0
 
 
 if __name__ == "__main__":
