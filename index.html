@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>マーケット比較ボード</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7; --surface: #fcfcfb;
+    --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+    --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11,11,11,0.10);
+    --up: #006300; --down: #b32d2d; --accent: #2a78d6;
+    --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#4a3aa7; --s8:#e34948; --fx:#898781;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #0d0d0d; --surface: #1a1a19;
+      --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+      --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10);
+      --up: #0ca30c; --down: #e66767; --accent: #3987e5;
+      --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767; --fx:#a9a89f;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19;
+    --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10);
+    --up: #0ca30c; --down: #e66767; --accent: #3987e5;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767; --fx:#a9a89f;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--page); color: var(--ink);
+    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+    padding-inline: 16px; padding-block: 20px 40px;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 16px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; }
+  h1 { font-size: 20px; font-weight: 650; margin: 0; letter-spacing: 0.01em; }
+  .sub { color: var(--ink-2); font-size: 13px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+  .seg { display: inline-flex; border: 1px solid var(--ring); border-radius: 8px; overflow: hidden; background: var(--surface); }
+  .seg button {
+    appearance: none; border: 0; background: transparent; color: var(--ink-2); font: inherit; font-size: 13px;
+    padding: 7px 12px; cursor: pointer; border-right: 1px solid var(--ring);
+  }
+  .seg button:last-child { border-right: 0; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; font-weight: 600; }
+  .seg button:focus-visible, .chip:focus-visible, .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .btn {
+    appearance: none; font: inherit; font-size: 13px; padding: 7px 12px; border-radius: 8px; cursor: pointer;
+    border: 1px solid var(--ring); background: var(--surface); color: var(--ink-2);
+  }
+  .card { background: var(--surface); border: 1px solid var(--ring); border-radius: 12px; padding: 14px 14px 10px; }
+  .chart-wrap { position: relative; }
+  svg { display: block; width: 100%; height: auto; }
+  .status { color: var(--ink-2); font-size: 13px; padding: 40px 0; text-align: center; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px 6px 8px; border-radius: 999px;
+    border: 1px solid var(--ring); background: var(--surface); color: var(--ink); font: inherit; font-size: 13px; cursor: pointer;
+  }
+  .chip .sw { width: 14px; height: 4px; border-radius: 2px; background: var(--c); }
+  .chip.fx .sw { background: repeating-linear-gradient(90deg, var(--c) 0 4px, transparent 4px 7px); }
+  .chip .pct { font-variant-numeric: tabular-nums; color: var(--ink-2); }
+  .chip .pct.up { color: var(--up); } .chip .pct.down { color: var(--down); }
+  .chip[aria-pressed="false"] { opacity: 0.45; }
+  .chip[aria-pressed="false"] .sw { background: var(--muted); }
+  .chip .na { color: var(--muted); font-size: 12px; }
+  .tip {
+    position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--ring); border-radius: 8px;
+    padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.12); min-width: 150px; display: none;
+  }
+  .tip .d { color: var(--ink-2); margin-bottom: 4px; }
+  .tip .row { display: flex; justify-content: space-between; gap: 12px; font-variant-numeric: tabular-nums; }
+  .tip .row b { font-weight: 500; }
+  .tip .row .v { color: var(--ink-2); }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { text-align: right; padding: 8px 10px; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  th { color: var(--ink-2); font-weight: 500; font-size: 12px; }
+  th:first-child, td:first-child { text-align: left; }
+  td.up { color: var(--up); } td.down { color: var(--down); }
+  footer { color: var(--muted); font-size: 12px; }
+  .warn { color: var(--down); font-size: 12px; }
+  @media (max-width: 480px) { .seg button { padding: 7px 9px; } h1 { font-size: 18px; } }
+  @media (prefers-reduced-motion: no-preference) { .chip { transition: opacity .15s; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>マーケット比較ボード</h1>
+    <div class="sub" id="updated">データ読み込み中…</div>
+  </header>
+
+  <div class="controls">
+    <div class="seg" id="ranges" role="group" aria-label="期間">
+      <button data-r="1M">1ヶ月</button><button data-r="3M">3ヶ月</button><button data-r="6M">6ヶ月</button>
+      <button data-r="YTD">年初来</button><button data-r="1Y" aria-pressed="true">1年</button><button data-r="3Y">3年</button><button data-r="5Y">5年</button>
+    </div>
+    <div class="seg" id="views" role="group" aria-label="表示">
+      <button data-v="chart" aria-pressed="true">チャート</button><button data-v="table">表</button>
+    </div>
+    <button class="btn" id="reload">再読み込み</button>
+  </div>
+
+  <div class="card">
+    <div class="chart-wrap" id="chartView">
+      <div class="status" id="status">データ読み込み中…</div>
+      <div class="tip" id="tip"></div>
+    </div>
+    <div class="table-wrap" id="tableView" hidden></div>
+  </div>
+
+  <div class="legend" id="legend" aria-label="表示する指数の切り替え"></div>
+
+  <footer>
+    起点日の終値を100として指数化。株価指数は各市場の現地通貨建て、ドル円は1ドル＝円。データ提供：Stooq／Yahoo Finance（1日数回自動更新、終値ベース）。チップをタップすると表示／非表示を切り替えられます。
+  </footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  const SERIES = [
+    { key: 'n225',   name: '日経平均',     region: '日本',   color: 'var(--s1)', on: true },
+    { key: 'topix',  name: 'TOPIX',        region: '日本',   color: 'var(--s3)', on: true },
+    { key: 'spx',    name: 'S&P500',       region: '米国',   color: 'var(--s2)', on: true },
+    { key: 'ndq',    name: 'NASDAQ',       region: '米国',   color: 'var(--s4)', on: true },
+    { key: 'dji',    name: 'NYダウ',       region: '米国',   color: 'var(--s5)', on: false },
+    { key: 'dax',    name: 'DAX',          region: 'ドイツ', color: 'var(--s6)', on: false },
+    { key: 'shc',    name: '上海総合',     region: '中国',   color: 'var(--s7)', on: false },
+    { key: 'hsi',    name: '香港ハンセン', region: '香港',   color: 'var(--s8)', on: false },
+    { key: 'usdjpy', name: 'ドル円',       region: '為替',   color: 'var(--fx)', on: true, fx: true },
+  ];
+  const state = { range: '1Y', view: 'chart', data: null, on: {} };
+  SERIES.forEach(s => { state.on[s.key] = s.on; });
+  try { const saved = JSON.parse(localStorage.getItem('mb-on') || 'null'); if (saved) Object.assign(state.on, saved); } catch (e) {}
+  try { const r = localStorage.getItem('mb-range'); if (r) state.range = r; } catch (e) {}
+
+  const $ = id => document.getElementById(id);
+  const chartView = $('chartView'), statusEl = $('status'), tip = $('tip'), legend = $('legend');
+
+  // ---------- データ取得 ----------
+  async function load(force) {
+    statusEl.hidden = false; statusEl.textContent = 'データ読み込み中…';
+    $('updated').textContent = '読み込み中…';
+    try {
+      const res = await fetch('data.json', { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      state.data = await res.json();
+      const t = new Date(state.data.updated);
+      $('updated').textContent = '更新: ' + t.toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      render();
+    } catch (err) {
+      statusEl.textContent = 'データを取得できませんでした（' + err.message + '）。しばらくしてから再読み込みしてください。';
+    }
+  }
+
+  // ---------- 期間・指数化 ----------
+  function rangeStart(lastDate) {
+    const d = new Date(lastDate + 'T00:00:00');
+    const r = state.range;
+    if (r === 'YTD') return new Date(d.getFullYear(), 0, 1);
+    const m = { '1M': 1, '3M': 3, '6M': 6, '1Y': 12, '3Y': 36, '5Y': 60 }[r] || 12;
+    d.setMonth(d.getMonth() - m);
+    return d;
+  }
+  function compute() {
+    const out = []; let lastDate = '';
+    for (const s of SERIES) {
+      const item = state.data.series[s.key];
+      if (item && item.ok && item.rows.length) { const ld = item.rows[item.rows.length - 1][0]; if (ld > lastDate) lastDate = ld; }
+    }
+    if (!lastDate) return { list: [], lastDate: '' };
+    const start = rangeStart(lastDate);
+    const startStr = start.getFullYear() + '-' + String(start.getMonth() + 1).padStart(2, '0') + '-' + String(start.getDate()).padStart(2, '0');
+    for (const s of SERIES) {
+      const item = state.data.series[s.key];
+      const o = { ...s, ok: false, pts: [] };
+      if (item && item.ok) {
+        const rows = item.rows.filter(r => r[0] >= startStr);
+        if (rows.length >= 2) {
+          const base = rows[0][1];
+          o.ok = true; o.base = base; o.baseDate = rows[0][0];
+          o.last = rows[rows.length - 1][1]; o.lastDate = rows[rows.length - 1][0];
+          o.pct = (o.last / base - 1) * 100;
+          o.pts = rows.map(r => ({ t: Date.parse(r[0] + 'T00:00:00Z'), d: r[0], v: r[1] / base * 100, raw: r[1] }));
+          o.stale = !!item.stale;
+        }
+      } else if (item && item.error) { o.error = item.error; }
+      out.push(o);
+    }
+    return { list: out, lastDate };
+  }
+
+  // ---------- 描画 ----------
+  const fmtN = (v, k) => k === 'usdjpy' ? v.toFixed(2) : Math.round(v).toLocaleString('ja-JP');
+  const fmtPct = p => (p > 0 ? '+' : '') + p.toFixed(1) + '%';
+  const fmtD = d => { const [y, m, dd] = d.split('-'); return y + '/' + +m + '/' + +dd; };
+
+  let current = null; // 描画中のシリーズ情報（ツールチップ用）
+
+  function render() {
+    if (!state.data) return;
+    document.querySelectorAll('#ranges button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.r === state.range)));
+    document.querySelectorAll('#views button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === state.view)));
+    const { list } = compute();
+    renderLegend(list);
+    if (state.view === 'chart') { chartView.hidden = false; $('tableView').hidden = true; drawChart(list); }
+    else { chartView.hidden = true; $('tableView').hidden = false; drawTable(list); }
+  }
+
+  function renderLegend(list) {
+    legend.innerHTML = '';
+    for (const s of list) {
+      const b = document.createElement('button');
+      b.className = 'chip' + (s.fx ? ' fx' : ''); b.type = 'button';
+      b.style.setProperty('--c', s.color);
+      b.setAttribute('aria-pressed', String(!!state.on[s.key] && s.ok));
+      b.disabled = !s.ok;
+      const pct = s.ok ? `<span class="pct ${s.pct > 0 ? 'up' : s.pct < 0 ? 'down' : ''}">${fmtPct(s.pct)}</span>` : `<span class="na">取得不可</span>`;
+      b.innerHTML = `<span class="sw"></span><span>${s.name}</span>${pct}`;
+      if (s.error) b.title = s.error;
+      b.addEventListener('click', () => {
+        state.on[s.key] = !state.on[s.key];
+        try { localStorage.setItem('mb-on', JSON.stringify(state.on)); } catch (e) {}
+        render();
+      });
+      legend.appendChild(b);
+    }
+  }
+
+  function drawChart(list) {
+    chartView.querySelectorAll('svg').forEach(n => n.remove());
+    const vis = list.filter(s => s.ok && state.on[s.key]);
+    if (!vis.length) { statusEl.hidden = false; statusEl.textContent = '表示する指数を下のチップから選んでください。'; current = null; return; }
+    statusEl.hidden = true;
+
+    const W = Math.max(320, chartView.clientWidth || 800);
+    const H = W < 560 ? 300 : 420;
+    const narrow = W < 560;
+    const M = { t: 16, r: narrow ? 46 : 108, b: 30, l: 40 };
+    const iw = W - M.l - M.r, ih = H - M.t - M.b;
+
+    let tMin = Infinity, tMax = -Infinity, vMin = Infinity, vMax = -Infinity;
+    for (const s of vis) for (const p of s.pts) { if (p.t < tMin) tMin = p.t; if (p.t > tMax) tMax = p.t; if (p.v < vMin) vMin = p.v; if (p.v > vMax) vMax = p.v; }
+    const pad = (vMax - vMin) * 0.06 || 1; vMin -= pad; vMax += pad;
+    const x = t => M.l + (t - tMin) / (tMax - tMin || 1) * iw;
+    const y = v => M.t + (vMax - v) / (vMax - vMin) * ih;
+
+    const ns = 'http://www.w3.org/2000/svg';
+    const el = (n, a) => { const e = document.createElementNS(ns, n); for (const k in a) e.setAttribute(k, a[k]); return e; };
+    const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: 'img', 'aria-label': '株価指数の騰落率比較チャート' });
+
+    // Y grid
+    const step = niceStep((vMax - vMin) / 5);
+    for (let v = Math.ceil(vMin / step) * step; v <= vMax; v += step) {
+      const yy = y(v), is100 = Math.abs(v - 100) < 1e-9;
+      svg.appendChild(el('line', { x1: M.l, x2: W - M.r, y1: yy, y2: yy, stroke: is100 ? 'var(--axis)' : 'var(--grid)', 'stroke-width': is100 ? 1.5 : 1 }));
+      const t = el('text', { x: M.l - 8, y: yy + 4, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--muted)' });
+      t.textContent = Math.round(v * 10) / 10; svg.appendChild(t);
+    }
+    // X ticks
+    for (const tk of timeTicks(tMin, tMax, W < 560 ? 4 : 7)) {
+      const xx = x(tk.t);
+      svg.appendChild(el('line', { x1: xx, x2: xx, y1: H - M.b, y2: H - M.b + 4, stroke: 'var(--axis)' }));
+      const t = el('text', { x: xx, y: H - M.b + 17, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--muted)' });
+      t.textContent = tk.label; svg.appendChild(t);
+    }
+    // Lines
+    for (const s of vis) {
+      const d = s.pts.map((p, i) => (i ? 'L' : 'M') + x(p.t).toFixed(1) + ' ' + y(p.v).toFixed(1)).join('');
+      svg.appendChild(el('path', { d, fill: 'none', stroke: s.color, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', 'stroke-dasharray': s.fx ? '6 4' : 'none' }));
+    }
+    // End labels（重なり回避）
+    const ends = vis.map(s => ({ s, y: y(s.pts[s.pts.length - 1].v) })).sort((a, b) => a.y - b.y);
+    for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 14) ends[i].y = ends[i - 1].y + 14;
+    for (const e of ends) {
+      const last = e.s.pts[e.s.pts.length - 1];
+      svg.appendChild(el('circle', { cx: x(last.t), cy: y(last.v), r: 4, fill: e.s.color, stroke: 'var(--surface)', 'stroke-width': 2 }));
+      const t = el('text', { x: W - M.r + 8, y: e.y + 4, 'font-size': 11, fill: 'var(--ink-2)' });
+      t.textContent = narrow ? last.v.toFixed(1) : `${e.s.name} ${last.v.toFixed(1)}`; svg.appendChild(t);
+    }
+    // Crosshair
+    const cross = el('line', { x1: 0, x2: 0, y1: M.t, y2: H - M.b, stroke: 'var(--axis)', 'stroke-dasharray': '3 3', visibility: 'hidden' });
+    svg.appendChild(cross);
+    const dots = vis.map(s => { const c = el('circle', { r: 4, fill: s.color, stroke: 'var(--surface)', 'stroke-width': 2, visibility: 'hidden' }); svg.appendChild(c); return c; });
+    const hit = el('rect', { x: M.l, y: M.t, width: iw, height: ih, fill: 'transparent' });
+    svg.appendChild(hit);
+    chartView.insertBefore(svg, tip);
+    current = { vis, x, y, tMin, tMax, W, H, M, cross, dots };
+
+    const move = ev => {
+      const rect = svg.getBoundingClientRect();
+      const px = (ev.clientX - rect.left) * (W / rect.width);
+      const t = tMin + (px - M.l) / iw * (tMax - tMin);
+      showTip(t, rect, ev.clientX - rect.left, ev.clientY - rect.top);
+    };
+    hit.addEventListener('pointermove', move);
+    hit.addEventListener('pointerdown', move);
+    hit.addEventListener('pointerleave', hideTip);
+  }
+
+  function nearest(pts, t) {
+    let lo = 0, hi = pts.length - 1;
+    while (lo < hi) { const mid = (lo + hi) >> 1; if (pts[mid].t < t) lo = mid + 1; else hi = mid; }
+    if (lo > 0 && Math.abs(pts[lo - 1].t - t) < Math.abs(pts[lo].t - t)) lo--;
+    return pts[lo];
+  }
+  function showTip(t, rect, cx, cy) {
+    if (!current) return;
+    const rows = current.vis.map((s, i) => {
+      const p = nearest(s.pts, t);
+      current.dots[i].setAttribute('cx', current.x(p.t)); current.dots[i].setAttribute('cy', current.y(p.v)); current.dots[i].setAttribute('visibility', 'visible');
+      return { s, p };
+    }).sort((a, b) => b.p.v - a.p.v);
+    const xx = current.x(rows[0].p.t);
+    current.cross.setAttribute('x1', xx); current.cross.setAttribute('x2', xx); current.cross.setAttribute('visibility', 'visible');
+    tip.innerHTML = `<div class="d">${fmtD(rows[0].p.d)}</div>` + rows.map(r =>
+      `<div class="row"><span><span style="display:inline-block;width:10px;height:3px;border-radius:2px;background:${r.s.color};vertical-align:middle;margin-right:6px"></span><b>${r.s.name}</b></span><span>${r.p.v.toFixed(1)} <span class="v">(${fmtN(r.p.raw, r.s.key)})</span></span></div>`).join('');
+    tip.style.display = 'block';
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    let left = cx + 14, top = cy - th / 2;
+    if (left + tw > rect.width) left = cx - tw - 14;
+    top = Math.max(0, Math.min(rect.height - th, top));
+    tip.style.left = left + 'px'; tip.style.top = top + 'px';
+  }
+  function hideTip() {
+    tip.style.display = 'none';
+    if (current) { current.cross.setAttribute('visibility', 'hidden'); current.dots.forEach(d => d.setAttribute('visibility', 'hidden')); }
+  }
+
+  function drawTable(list) {
+    const rows = list.filter(s => s.ok).sort((a, b) => b.pct - a.pct);
+    const html = `<table><thead><tr><th>指数</th><th>地域</th><th>起点日</th><th>起点値</th><th>最新日</th><th>最新値</th><th>指数化</th><th>騰落率</th></tr></thead><tbody>` +
+      rows.map(s => `<tr><td>${s.name}</td><td>${s.region}</td><td>${fmtD(s.baseDate)}</td><td>${fmtN(s.base, s.key)}</td><td>${fmtD(s.lastDate)}</td><td>${fmtN(s.last, s.key)}</td><td>${(s.last / s.base * 100).toFixed(1)}</td><td class="${s.pct > 0 ? 'up' : s.pct < 0 ? 'down' : ''}">${fmtPct(s.pct)}</td></tr>`).join('') +
+      `</tbody></table>` +
+      list.filter(s => !s.ok).map(s => `<p class="warn">${s.name}: 取得できませんでした${s.error ? '（' + s.error + '）' : ''}</p>`).join('');
+    $('tableView').innerHTML = html;
+  }
+
+  function niceStep(raw) {
+    const p = Math.pow(10, Math.floor(Math.log10(raw)));
+    for (const m of [1, 2, 2.5, 5, 10]) if (m * p >= raw) return m * p;
+    return 10 * p;
+  }
+  function timeTicks(t0, t1, n) {
+    const out = [], span = t1 - t0, dayMs = 864e5;
+    const months = span / dayMs / 30.4;
+    const d = new Date(t0); d.setUTCDate(1); d.setUTCHours(0, 0, 0, 0);
+    if (months > n * 6) { // 年ごと
+      d.setUTCMonth(0); d.setUTCFullYear(d.getUTCFullYear() + 1);
+      while (d.getTime() <= t1) { out.push({ t: d.getTime(), label: d.getUTCFullYear() + '年' }); d.setUTCFullYear(d.getUTCFullYear() + 1); }
+    } else if (months > 1.5) { // 月ごと
+      const stepM = Math.max(1, Math.ceil(months / n));
+      d.setUTCMonth(d.getUTCMonth() + 1);
+      while (d.getTime() <= t1) {
+        if (d.getUTCMonth() % stepM === 0) out.push({ t: d.getTime(), label: (d.getUTCMonth() === 0 ? d.getUTCFullYear() + '年' : (d.getUTCMonth() + 1) + '月') });
+        d.setUTCMonth(d.getUTCMonth() + 1);
+      }
+    } else { // 週ごと
+      const s = new Date(t0); s.setUTCHours(0, 0, 0, 0);
+      const stepD = Math.max(1, Math.round(span / dayMs / n));
+      for (let t = s.getTime() + stepD * dayMs; t <= t1; t += stepD * dayMs) { const dd = new Date(t); out.push({ t, label: (dd.getUTCMonth() + 1) + '/' + dd.getUTCDate() }); }
+    }
+    return out;
+  }
+
+  // ---------- イベント ----------
+  $('ranges').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    state.range = b.dataset.r; try { localStorage.setItem('mb-range', state.range); } catch (err) {}
+    render();
+  });
+  $('views').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; state.view = b.dataset.v; render(); });
+  $('reload').addEventListener('click', () => load(true));
+  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(render, 150); });
+
+  load(false);
+})();
+</script>
+</body>
+</html>

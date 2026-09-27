@@ -1,0 +1,56 @@
+name: 株価データ更新と公開
+
+on:
+  schedule:
+    # UTC 22:30 / 07:30 / 13:30 / 21:00 = 日本時間 7:30 / 16:30 / 22:30 / 6:00（各市場の引け後）
+    - cron: "30 22 * * *"
+    - cron: "30 7 * * *"
+    - cron: "30 13 * * *"
+    - cron: "0 21 * * *"
+  push:
+    branches: [main]
+    paths-ignore: ["data.json"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: update-and-deploy
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: データ取得
+        run: python fetch_data.py
+      - name: 変更があればコミット
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data.json
+          git diff --cached --quiet && echo "変更なし" || (git commit -m "data: $(date -u +'%Y-%m-%d %H:%M UTC')" && git push)
+      - name: 公開用ファイルをまとめる
+        run: |
+          mkdir -p site
+          cp index.html data.json site/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: update
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
