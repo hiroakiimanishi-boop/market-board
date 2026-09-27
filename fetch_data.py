@@ -20,17 +20,32 @@ SYMBOLS = {
 }
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
+# curl_cffi があればブラウザ(Chrome)になりすまして通信する（Yahoo の 429 対策）
+try:
+    from curl_cffi import requests as cffi_requests
+    _session = cffi_requests.Session(impersonate="chrome")
+    print("curl_cffi: 使用")
+except Exception as _e:  # 未インストール時は標準ライブラリ
+    _session = None
+    print(f"curl_cffi: 未使用 ({_e})")
 _jar = http.cookiejar.CookieJar()
 _opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(_jar))
 
 
-def http_get(url, headers=None, retries=3):
-    h = {"User-Agent": UA, "Accept": "*/*", "Accept-Language": "en-US,en;q=0.9"}
+def http_get(url, headers=None, retries=2):
+    h = {"Accept": "*/*", "Accept-Language": "en-US,en;q=0.9"}
+    if _session is None:
+        h["User-Agent"] = UA
     if headers:
         h.update(headers)
     last = None
     for i in range(retries):
         try:
+            if _session is not None:
+                r = _session.get(url, headers=h, timeout=30, allow_redirects=True)
+                if r.status_code >= 400:
+                    raise urllib.error.HTTPError(url, r.status_code, "err", None, io.BytesIO(r.content[:200]))
+                return r.text
             with _opener.open(urllib.request.Request(url, headers=h), timeout=30) as r:
                 return r.read().decode("utf-8", "replace")
         except urllib.error.HTTPError as e:
