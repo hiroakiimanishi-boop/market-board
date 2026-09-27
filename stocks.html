@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>シクリカルバリュー銘柄スキャン</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7; --surface: #fcfcfb;
+    --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+    --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11,11,11,0.10);
+    --up: #006300; --down: #b32d2d; --accent: #2a78d6; --accent-soft: rgba(42,120,214,0.10);
+    --bar-pos: #2a78d6; --bar-neg: #e34948;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #0d0d0d; --surface: #1a1a19;
+      --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+      --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10);
+      --up: #0ca30c; --down: #e66767; --accent: #3987e5; --accent-soft: rgba(57,135,229,0.18);
+      --bar-pos: #3987e5; --bar-neg: #e66767;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19;
+    --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10);
+    --up: #0ca30c; --down: #e66767; --accent: #3987e5; --accent-soft: rgba(57,135,229,0.18);
+    --bar-pos: #3987e5; --bar-neg: #e66767;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { overflow-x: clip; }
+  body {
+    background: var(--page); color: var(--ink);
+    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+    padding-inline: 16px; padding-block: 20px 40px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 16px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; }
+  h1 { font-size: 20px; font-weight: 650; margin: 0; }
+  nav a { color: var(--ink-2); text-decoration: none; font-size: 13px; margin-right: 14px; }
+  nav a[aria-current] { color: var(--ink); font-weight: 600; border-bottom: 2px solid var(--accent); }
+  .sub { color: var(--ink-2); font-size: 13px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; }
+  .seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--ring); border-radius: 8px; overflow: hidden; background: var(--surface); }
+  .seg button {
+    appearance: none; border: 0; background: transparent; color: var(--ink-2); font: inherit; font-size: 13px;
+    padding: 7px 11px; cursor: pointer; border-right: 1px solid var(--ring);
+  }
+  .seg button:last-child { border-right: 0; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; font-weight: 600; }
+  select, input[type=search] {
+    font: inherit; font-size: 13px; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--ring);
+    background: var(--surface); color: var(--ink); max-width: 100%;
+  }
+  input[type=search] { min-width: 160px; }
+  button:focus-visible, select:focus-visible, input:focus-visible, tr[tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .card { background: var(--surface); border: 1px solid var(--ring); border-radius: 12px; padding: 12px 14px; min-width: 0; overflow: hidden; }
+  .wrap > * { min-width: 0; }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { text-align: right; padding: 8px 8px; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  th { color: var(--ink-2); font-weight: 500; font-size: 12px; cursor: pointer; user-select: none; position: sticky; top: 0; background: var(--surface); }
+  th[aria-sort="descending"]::after { content: " ▼"; font-size: 9px; } th[aria-sort="ascending"]::after { content: " ▲"; font-size: 9px; }
+  th:first-child, td:first-child, th[data-k="n"] { text-align: left; }
+  td.name { text-align: left; white-space: normal; min-width: 150px; }
+  td.name b { font-weight: 600; } td.name small { color: var(--muted); display: block; font-size: 11px; }
+  tbody tr { cursor: pointer; } tbody tr:hover { background: var(--accent-soft); }
+  tbody tr[aria-selected="true"] { background: var(--accent-soft); }
+  .up { color: var(--up); } .down { color: var(--down); } .muted { color: var(--muted); }
+  .score { display: inline-block; min-width: 38px; padding: 2px 8px; border-radius: 999px; font-weight: 600; background: var(--grid); color: var(--ink); }
+  .score.hi { background: var(--accent); color: #fff; }
+  .score.mid { background: var(--accent-soft); color: var(--ink); }
+  .bars { display: inline-flex; align-items: flex-end; gap: 2px; height: 22px; vertical-align: middle; }
+  .bars i { display: block; width: 6px; border-radius: 1px; background: var(--bar-pos); }
+  .bars i.neg { background: var(--bar-neg); align-self: flex-start; }
+  .tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--ring); color: var(--ink-2); margin: 1px 2px 1px 0; }
+  .tag.cyc { border-color: var(--accent); color: var(--accent); }
+  .status { color: var(--ink-2); font-size: 13px; padding: 30px 0; text-align: center; }
+  .detail { display: grid; gap: 12px; }
+  .detail h2 { font-size: 17px; margin: 0; } .detail h2 small { font-weight: 400; color: var(--ink-2); font-size: 13px; margin-left: 8px; }
+  .kv { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px 14px; }
+  .kv div { border-top: 1px solid var(--grid); padding-top: 6px; }
+  .kv span { display: block; font-size: 11px; color: var(--muted); } .kv b { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .breakdown { display: flex; flex-wrap: wrap; gap: 6px; }
+  .breakdown span { font-size: 12px; padding: 3px 8px; border-radius: 6px; background: var(--grid); }
+  .links { display: flex; flex-wrap: wrap; gap: 6px 16px; } .links a { color: var(--accent); font-size: 13px; }
+  .fin table { width: auto; } .fin th { position: static; cursor: default; }
+  .closebtn { appearance: none; border: 1px solid var(--ring); background: var(--surface); color: var(--ink-2); border-radius: 8px; padding: 5px 10px; font: inherit; font-size: 12px; cursor: pointer; }
+  footer { color: var(--muted); font-size: 12px; line-height: 1.6; }
+  footer b { color: var(--ink-2); font-weight: 600; }
+  @media (max-width: 720px) { .hide-sm { display: none; } h1 { font-size: 18px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <nav><a href="./">マーケット比較</a><a href="stocks.html" aria-current="page">銘柄スキャン</a></nav>
+      <h1>シクリカルバリュー銘柄スキャン</h1>
+    </div>
+    <div class="sub" id="meta">読み込み中…</div>
+  </header>
+
+  <div class="controls">
+    <div class="seg" id="presets" role="group" aria-label="絞り込みプリセット">
+      <button data-p="all" aria-pressed="true">総合スコア順</button>
+      <button data-p="cyc">シクリカル底値</button>
+      <button data-p="asset">資産VAL</button>
+      <button data-p="earn">収益VAL</button>
+      <button data-p="loss">2期連続赤字</button>
+      <button data-p="netnet">ネットネット</button>
+    </div>
+    <select id="sector" aria-label="業種"><option value="">全業種</option><option value="__cyc">景気敏感業種のみ</option></select>
+    <select id="mcap" aria-label="時価総額">
+      <option value="">時価総額：全て</option><option value="0-100">〜100億円</option><option value="0-300">〜300億円</option>
+      <option value="0-1000">〜1000億円</option><option value="1000-">1000億円〜</option>
+    </select>
+    <select id="market" aria-label="市場"><option value="">全市場</option><option>プライム</option><option>スタンダード</option><option>グロース</option></select>
+    <select id="limit" aria-label="表示件数"><option value="50">上位50件</option><option value="100">上位100件</option><option value="300">上位300件</option><option value="100000">全件</option></select>
+    <input type="search" id="q" placeholder="コード・銘柄名で検索">
+  </div>
+
+  <div class="card" id="detailCard" hidden></div>
+
+  <div class="card">
+    <div class="status" id="status">読み込み中…</div>
+    <div class="table-wrap" id="tableWrap" hidden>
+      <table id="tbl">
+        <thead><tr>
+          <th data-k="code" class="hide-sm">コード</th>
+          <th data-k="n">銘柄</th>
+          <th data-k="mc">時価総額<br>(億円)</th>
+          <th data-k="pbr">PBR</th>
+          <th data-k="per">PER</th>
+          <th data-k="dd">10年高値比</th>
+          <th data-k="eqr">自己資本<br>比率</th>
+          <th data-k="ncr" class="hide-sm">ネット現金<br>/時価総額</th>
+          <th data-k="ni" class="hide-sm">純利益<br>推移</th>
+          <th data-k="peakper">ピーク<br>PER</th>
+          <th data-k="div" class="hide-sm">配当</th>
+          <th data-k="score" aria-sort="descending">スコア</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="sub" id="count" style="padding-top:8px"></div>
+  </div>
+
+  <footer>
+    <b>スコアの考え方（100点満点）</b>：資産割安（PBR 0.3以下 25点 / 0.5以下 20点 / 0.7以下 12点）＋ 底値圏（10年高値から −70% 20点 / −50% 15点 / −30% 8点）＋ 業績の谷（直近赤字 10点、ピーク比3割以下 8点、2期連続赤字 +5点）＋ 潜在収益力（時価総額 ÷ 過去5期ピーク純利益＝ピークPER 3倍以下 20点 / 5倍以下 15点 / 8倍以下 8点）＋ 生存力（自己資本比率 60%以上 10点 / 40%以上 7点、ネットキャッシュ +5点）＋ 配当利回り3%以上 5点。<br>
+    <b>プリセット</b>：シクリカル底値＝景気敏感業種で10年高値から半値以下かつピークPER 8倍以下／資産VAL＝PBR 0.5倍以下・自己資本比率60%以上／収益VAL＝PER 15倍以下・営業利益率10%以上・ROA 7%以上・時価総額300億円以下／ネットネット＝ネットキャッシュが時価総額を上回る。<br>
+    データは Yahoo Finance（決算期・通貨は各社の開示に準拠、数値の欠損や誤りがあり得ます）。全銘柄を数日かけて巡回するため、銘柄ごとに取得日が異なります。本ページは機械的なスクリーニング結果であり、投資を推奨するものではありません。最終判断は有価証券報告書・決算短信をご確認のうえご自身で行ってください。
+  </footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  const CYC = new Set(["鉱業","石油・石炭製品","鉄鋼","非鉄金属","金属製品","海運業","空運業","化学","繊維製品","パルプ・紙","ガラス・土石製品","機械","電気機器","輸送用機器","精密機器","建設業","不動産業","卸売業","証券、商品先物取引業","その他金融業","銀行業","倉庫・運輸関連業","ゴム製品"]);
+  const $ = id => document.getElementById(id);
+  const state = { preset: 'all', sortK: 'score', sortDir: -1, data: null, rows: [], selected: null };
+
+  const fmt = {
+    oku: v => v == null ? '–' : (v / 1e8).toLocaleString('ja-JP', { maximumFractionDigits: v / 1e8 >= 100 ? 0 : 1 }),
+    x: v => v == null ? '–' : v.toFixed(2),
+    x1: v => v == null ? '–' : v.toFixed(1),
+    pct: v => v == null ? '–' : (v * 100).toFixed(v >= 10 ? 0 : 1) + '%',
+    pct0: v => v == null ? '–' : Math.round(v * 100) + '%',
+    yen: v => v == null ? '–' : v.toLocaleString('ja-JP', { maximumFractionDigits: 1 }),
+    okuS: v => v == null ? '–' : (v / 1e8).toLocaleString('ja-JP', { maximumFractionDigits: 0 }) + '億円',
+  };
+  const cls = (v, goodLow) => v == null ? 'muted' : '';
+
+  async function load() {
+    try {
+      const res = await fetch('stocks.json', { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      state.data = await res.json();
+      const m = state.data.meta;
+      $('meta').textContent = `採点済み ${m.scanned.toLocaleString()} / ${m.universe.toLocaleString()} 銘柄 ・ 更新 ${m.updated.slice(5, 16).replace('T', ' ')}`;
+      buildSectorOptions();
+      state.rows = Object.entries(state.data.stocks).filter(([, v]) => v.score != null).map(([code, v]) => ({ code, ...v }));
+      if (!state.rows.length) { $('status').textContent = 'まだスキャン結果がありません。最初の巡回（数十分）が終わると表示されます。'; return; }
+      render();
+    } catch (err) {
+      $('status').textContent = 'データを読み込めませんでした（' + err.message + '）。しばらくしてから再読み込みしてください。';
+    }
+  }
+
+  function buildSectorOptions() {
+    const secs = {};
+    for (const v of Object.values(state.data.stocks)) if (v.sec) secs[v.sec] = (secs[v.sec] || 0) + 1;
+    const sel = $('sector');
+    for (const s of Object.keys(secs).sort()) {
+      const o = document.createElement('option'); o.value = s; o.textContent = `${s}${CYC.has(s) ? ' ◎' : ''} (${secs[s]})`; sel.appendChild(o);
+    }
+  }
+
+  function passes(r) {
+    const p = state.preset;
+    if (p === 'cyc' && !(CYC.has(r.sec) && r.dd != null && r.dd <= -0.5 && r.peakper != null && r.peakper <= 8)) return false;
+    if (p === 'asset' && !(r.flags || []).includes('資産VAL')) return false;
+    if (p === 'earn' && !(r.flags || []).includes('収益VAL')) return false;
+    if (p === 'loss' && !(r.loss >= 2)) return false;
+    if (p === 'netnet' && !(r.ncr != null && r.ncr >= 1)) return false;
+    const sec = $('sector').value;
+    if (sec === '__cyc' && !CYC.has(r.sec)) return false;
+    if (sec && sec !== '__cyc' && r.sec !== sec) return false;
+    const mc = $('mcap').value;
+    if (mc) {
+      const [lo, hi] = mc.split('-'); const v = (r.mc || 0) / 1e8;
+      if (lo && v < +lo) return false; if (hi && v > +hi) return false;
+    }
+    const mk = $('market').value; if (mk && r.m !== mk) return false;
+    const q = $('q').value.trim().toLowerCase();
+    if (q && !(r.code.includes(q) || (r.n || '').toLowerCase().includes(q))) return false;
+    return true;
+  }
+
+  function sortRows(rows) {
+    const k = state.sortK, d = state.sortDir;
+    const val = r => k === 'ni' ? (r.ni && r.ni.length ? r.ni[r.ni.length - 1][1] : null) : k === 'code' ? +r.code : r[k];
+    return rows.sort((a, b) => {
+      const x = val(a), y = val(b);
+      if (x == null && y == null) return 0; if (x == null) return 1; if (y == null) return -1;
+      return typeof x === 'string' ? d * x.localeCompare(y, 'ja') : d * (x - y);
+    });
+  }
+
+  function bars(ni) {
+    if (!ni || !ni.length) return '<span class="muted">–</span>';
+    const mx = Math.max(...ni.map(x => Math.abs(x[1]))) || 1;
+    return '<span class="bars" title="' + ni.map(x => `${x[0]}: ${fmt.okuS(x[1])}`).join('\n') + '">' +
+      ni.map(x => `<i class="${x[1] < 0 ? 'neg' : ''}" style="height:${Math.max(2, Math.abs(x[1]) / mx * 22)}px"></i>`).join('') + '</span>';
+  }
+
+  function render() {
+    document.querySelectorAll('#presets button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.p === state.preset)));
+    document.querySelectorAll('#tbl th').forEach(th => { if (th.dataset.k === state.sortK) th.setAttribute('aria-sort', state.sortDir < 0 ? 'descending' : 'ascending'); else th.removeAttribute('aria-sort'); });
+    const rows = sortRows(state.rows.filter(passes));
+    const lim = +$('limit').value;
+    const shown = rows.slice(0, lim);
+    $('tbody').innerHTML = shown.map(r => `
+      <tr data-code="${r.code}" tabindex="0" aria-selected="${state.selected === r.code}">
+        <td class="hide-sm">${r.code}</td>
+        <td class="name"><b>${esc(r.n)}</b><small>${esc(r.sec || '')}${CYC.has(r.sec) ? ' ◎' : ''} ・ ${esc(r.m || '')}</small></td>
+        <td>${fmt.oku(r.mc)}</td>
+        <td class="${r.pbr != null && r.pbr <= 0.5 ? 'up' : ''}">${fmt.x(r.pbr)}</td>
+        <td>${r.per == null ? '<span class="muted">赤字/–</span>' : fmt.x1(r.per)}</td>
+        <td class="${r.dd != null && r.dd <= -0.5 ? 'down' : ''}">${r.dd == null ? '–' : (r.dd * 100).toFixed(0) + '%'}</td>
+        <td>${fmt.pct0(r.eqr)}</td>
+        <td class="hide-sm ${r.ncr != null && r.ncr >= 1 ? 'up' : ''}">${fmt.pct0(r.ncr)}</td>
+        <td class="hide-sm">${bars(r.ni)}</td>
+        <td class="${r.peakper != null && r.peakper <= 5 ? 'up' : ''}">${fmt.x1(r.peakper)}</td>
+        <td class="hide-sm">${fmt.pct(r.div)}</td>
+        <td><span class="score ${r.score >= 60 ? 'hi' : r.score >= 40 ? 'mid' : ''}">${r.score}</span></td>
+      </tr>`).join('');
+    $('status').hidden = true; $('tableWrap').hidden = false;
+    $('count').textContent = `条件に合う銘柄 ${rows.length.toLocaleString()} 件${rows.length > lim ? `（上位 ${lim} 件を表示）` : ''}`;
+  }
+
+  function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+  function showDetail(code) {
+    const r = state.rows.find(x => x.code === code); if (!r) return;
+    state.selected = code;
+    const sc = r.sc || {};
+    const fin = (r.ni || []).map((x, i) => `<tr><td>${x[0]}</td><td>${fmt.okuS((r.rev || [])[i] ? r.rev[i][1] : null)}</td><td class="${x[1] < 0 ? 'down' : ''}">${fmt.okuS(x[1])}</td></tr>`).join('');
+    $('detailCard').innerHTML = `
+      <div class="detail">
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap">
+          <h2>${r.code} ${esc(r.n)}<small>${esc(r.sec || '')} ・ ${esc(r.m || '')} ・ ${esc(r.sz || '')}</small></h2>
+          <button class="closebtn" id="closeDetail">閉じる</button>
+        </div>
+        <div>${(r.flags || []).map(f => `<span class="tag ${f === '景気敏感' ? 'cyc' : ''}">${f}</span>`).join('')}
+          <span class="score ${r.score >= 60 ? 'hi' : r.score >= 40 ? 'mid' : ''}" style="margin-left:6px">スコア ${r.score}</span></div>
+        <div class="breakdown">${Object.entries(sc).map(([k, v]) => `<span>${k} ${v}</span>`).join('')}</div>
+        <div class="kv">
+          <div><span>株価</span><b>${fmt.yen(r.p)} 円</b></div>
+          <div><span>時価総額</span><b>${fmt.okuS(r.mc)}</b></div>
+          <div><span>PBR</span><b>${fmt.x(r.pbr)}</b></div>
+          <div><span>PER（実績 / 予想）</span><b>${fmt.x1(r.per)} / ${fmt.x1(r.fper)}</b></div>
+          <div><span>ピークPER（時価総額÷過去ピーク純利益）</span><b>${fmt.x1(r.peakper)}</b></div>
+          <div><span>直近純利益 ÷ ピーク</span><b>${fmt.pct0(r.trough)}</b></div>
+          <div><span>10年高値からの下落率</span><b>${r.dd == null ? '–' : (r.dd * 100).toFixed(0) + '%'}</b></div>
+          <div><span>52週 安値 / 高値</span><b>${fmt.yen(r.lo52)} / ${fmt.yen(r.hi52)}</b></div>
+          <div><span>自己資本比率</span><b>${fmt.pct0(r.eqr)}</b></div>
+          <div><span>ネットキャッシュ（現金−有利子負債）</span><b>${fmt.okuS(r.nc)}</b></div>
+          <div><span>ネットキャッシュ ÷ 時価総額</span><b>${fmt.pct0(r.ncr)}</b></div>
+          <div><span>営業CF</span><b>${fmt.okuS(r.ocf)}</b></div>
+          <div><span>ROA / ROE</span><b>${fmt.pct(r.roa)} / ${fmt.pct(r.roe)}</b></div>
+          <div><span>営業利益率</span><b>${fmt.pct(r.opm)}</b></div>
+          <div><span>配当利回り</span><b>${fmt.pct(r.div)}</b></div>
+          <div><span>データ取得日</span><b>${r.at || '–'}</b></div>
+        </div>
+        <div class="fin table-wrap"><table><thead><tr><th>決算期</th><th>売上高</th><th>純利益</th></tr></thead><tbody>${fin || '<tr><td colspan="3" class="muted">財務データなし</td></tr>'}</tbody></table></div>
+        <div class="links">
+          <a href="https://kabutan.jp/stock/?code=${r.code}" target="_blank" rel="noopener">株探</a>
+          <a href="https://kabutan.jp/stock/finance?code=${r.code}" target="_blank" rel="noopener">株探 業績</a>
+          <a href="https://irbank.net/${r.code}" target="_blank" rel="noopener">IR BANK</a>
+          <a href="https://finance.yahoo.co.jp/quote/${r.code}.T" target="_blank" rel="noopener">Yahoo!ファイナンス</a>
+          <a href="https://www.buffett-code.com/company/${r.code}/" target="_blank" rel="noopener">バフェット・コード</a>
+        </div>
+      </div>`;
+    $('detailCard').hidden = false;
+    $('closeDetail').addEventListener('click', () => { $('detailCard').hidden = true; state.selected = null; render(); });
+    document.querySelectorAll('#tbody tr').forEach(tr => tr.setAttribute('aria-selected', String(tr.dataset.code === code)));
+    $('detailCard').scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+  }
+
+  // events
+  $('presets').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; state.preset = b.dataset.p; render(); });
+  ['sector', 'mcap', 'market', 'limit'].forEach(id => $(id).addEventListener('change', render));
+  let qt; $('q').addEventListener('input', () => { clearTimeout(qt); qt = setTimeout(render, 200); });
+  document.querySelector('#tbl thead').addEventListener('click', e => {
+    const th = e.target.closest('th'); if (!th) return;
+    const k = th.dataset.k;
+    if (state.sortK === k) state.sortDir *= -1; else { state.sortK = k; state.sortDir = (k === 'n' || k === 'code' || k === 'pbr' || k === 'per' || k === 'peakper' || k === 'dd') ? 1 : -1; }
+    render();
+  });
+  $('tbody').addEventListener('click', e => { const tr = e.target.closest('tr'); if (tr) showDetail(tr.dataset.code); });
+  $('tbody').addEventListener('keydown', e => { if (e.key === 'Enter') { const tr = e.target.closest('tr'); if (tr) showDetail(tr.dataset.code); } });
+
+  load();
+})();
+</script>
+</body>
+</html>

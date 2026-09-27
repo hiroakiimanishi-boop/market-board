@@ -41,6 +41,8 @@
   .wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 16px; }
   header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; }
   h1 { font-size: 20px; font-weight: 650; margin: 0; letter-spacing: 0.01em; }
+  .nav a { color: var(--ink-2); text-decoration: none; font-size: 13px; margin-right: 14px; }
+  .nav a[aria-current] { color: var(--ink); font-weight: 600; border-bottom: 2px solid var(--accent); }
   .sub { color: var(--ink-2); font-size: 13px; }
   .controls { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
   .seg { display: inline-flex; border: 1px solid var(--ring); border-radius: 8px; overflow: hidden; background: var(--surface); }
@@ -94,7 +96,10 @@
 <body>
 <div class="wrap">
   <header>
-    <h1>マーケット比較ボード</h1>
+    <div>
+      <nav class="nav"><a href="./" aria-current="page">マーケット比較</a><a href="stocks.html">銘柄スキャン</a></nav>
+      <h1>マーケット比較ボード</h1>
+    </div>
     <div class="sub" id="updated">データ読み込み中…</div>
   </header>
 
