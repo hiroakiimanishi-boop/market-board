@@ -9,8 +9,12 @@ on:
     - cron: "0 21 * * *"
   push:
     branches: [main]
-    paths-ignore: ["data.json"]
+    paths-ignore: ["data.json", "stocks.json", "universe.json"]
   workflow_dispatch:
+    inputs:
+      batch:
+        description: "スキャンする銘柄数"
+        default: "500"
 
 permissions:
   contents: write
@@ -24,25 +28,33 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
+    timeout-minutes: 70
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - name: ライブラリ導入
-        run: pip install -q curl_cffi
-      - name: データ取得
+        run: pip install -q curl_cffi openpyxl
+      - name: 指数データ取得
         run: python fetch_data.py
+      - name: 個別株スキャン（1回あたり BATCH 銘柄）
+        env:
+          BATCH: ${{ github.event.inputs.batch || '500' }}
+          MAX_MINUTES: "45"
+        run: python scan_stocks.py
       - name: 変更があればコミット
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data.json
-          git diff --cached --quiet && echo "変更なし" || (git commit -m "data: $(date -u +'%Y-%m-%d %H:%M UTC')" && git push)
+          git add stocks.json universe.json 2>/dev/null || true
+          git diff --cached --quiet && echo "変更なし" || (git commit -m "data: $(date -u +'%Y-%m-%d %H:%M UTC')" && git pull --rebase && git push)
       - name: 公開用ファイルをまとめる
         run: |
           mkdir -p site
-          cp index.html data.json site/
+          cp index.html stocks.html data.json site/
+          cp stocks.json site/ 2>/dev/null || echo '{"meta":{"updated":"","universe":0,"scanned":0},"stocks":{}}' > site/stocks.json
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
