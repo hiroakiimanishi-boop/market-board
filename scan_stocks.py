@@ -164,7 +164,12 @@ def evaluate(info, q, ts, hi10):
         debt = ts["annualTotalDebt"][-1][1]
     net_cash = (cash - debt) if cash is not None and debt is not None else None
     net_cash_ratio = pct(net_cash, mcap)
-    peak_ni = max(ni) if ni else None
+    # 潜在収益力は「営業利益のピーク×0.7（税引後の概算）」を基本にする。
+    # 純利益のピークは資産売却益などの一過性利益で膨らむことがあるため、営業利益が取れない場合のみ純利益を使う。
+    oi = [v for _, v in ts.get("annualOperatingIncome", [])]
+    peak_oi_after_tax = max(oi) * 0.7 if oi and max(oi) > 0 else None
+    peak_ni_raw = max(ni) if ni else None
+    peak_ni = peak_oi_after_tax if peak_oi_after_tax is not None else peak_ni_raw
     peak_per = (mcap / peak_ni) if mcap and peak_ni and peak_ni > 0 else None
     latest_ni = ni[-1] if ni else None
     loss_years = 0
@@ -173,9 +178,9 @@ def evaluate(info, q, ts, hi10):
             loss_years += 1
         else:
             break
-    trough = None  # 直近利益 / ピーク利益
-    if peak_ni and peak_ni > 0 and latest_ni is not None:
-        trough = latest_ni / peak_ni
+    trough = None  # 直近利益 / ピーク利益（純利益ベース）
+    if peak_ni_raw and peak_ni_raw > 0 and latest_ni is not None:
+        trough = latest_ni / peak_ni_raw
     drawdown = (q["price"] / hi10 - 1) if q.get("price") and hi10 else None
 
     s = {}
@@ -212,7 +217,8 @@ def evaluate(info, q, ts, hi10):
         "p": q.get("price"), "mc": mcap, "pbr": pbr, "per": per, "fper": q.get("fper"),
         "div": q.get("div"), "roa": q.get("roa"), "roe": q.get("roe"), "opm": q.get("opm"),
         "eqr": equity_ratio, "nc": net_cash, "ncr": net_cash_ratio, "ocf": q.get("ocf"),
-        "ni": ts.get("annualNetIncome", []), "rev": ts.get("annualTotalRevenue", []),
+        "ni": ts.get("annualNetIncome", []), "rev": ts.get("annualTotalRevenue", []), "oi": ts.get("annualOperatingIncome", []),
+        "peakbase": "営業利益×0.7" if peak_oi_after_tax is not None else "純利益",
         "peakper": peak_per, "trough": trough, "loss": loss_years,
         "hi10": hi10, "dd": drawdown, "hi52": q.get("hi52"), "lo52": q.get("lo52"),
         "score": score, "sc": s, "flags": flags,

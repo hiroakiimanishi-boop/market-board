@@ -152,7 +152,7 @@
   </div>
 
   <footer>
-    <b>スコアの考え方（100点満点）</b>：資産割安（PBR 0.3以下 25点 / 0.5以下 20点 / 0.7以下 12点）＋ 底値圏（10年高値から −70% 20点 / −50% 15点 / −30% 8点）＋ 業績の谷（直近赤字 10点、ピーク比3割以下 8点、2期連続赤字 +5点）＋ 潜在収益力（時価総額 ÷ 過去5期ピーク純利益＝ピークPER 3倍以下 20点 / 5倍以下 15点 / 8倍以下 8点）＋ 生存力（自己資本比率 60%以上 10点 / 40%以上 7点、ネットキャッシュ +5点）＋ 配当利回り3%以上 5点。<br>
+    <b>スコアの考え方（100点満点）</b>：資産割安（PBR 0.3以下 25点 / 0.5以下 20点 / 0.7以下 12点）＋ 底値圏（10年高値から −70% 20点 / −50% 15点 / −30% 8点）＋ 業績の谷（直近赤字 10点、ピーク比3割以下 8点、2期連続赤字 +5点）＋ 潜在収益力（時価総額 ÷ 過去5期の営業利益ピーク×0.7＝ピークPER。一過性の売却益で膨らむ純利益ではなく本業の稼ぐ力で見る 3倍以下 20点 / 5倍以下 15点 / 8倍以下 8点）＋ 生存力（自己資本比率 60%以上 10点 / 40%以上 7点、ネットキャッシュ +5点）＋ 配当利回り3%以上 5点。<br>
     <b>プリセット</b>：シクリカル底値＝景気敏感業種で10年高値から半値以下かつピークPER 8倍以下／資産VAL＝PBR 0.5倍以下・自己資本比率60%以上／収益VAL＝PER 15倍以下・営業利益率10%以上・ROA 7%以上・時価総額300億円以下／ネットネット＝ネットキャッシュが時価総額を上回る。<br>
     データは Yahoo Finance（決算期・通貨は各社の開示に準拠、数値の欠損や誤りがあり得ます）。全銘柄を数日かけて巡回するため、銘柄ごとに取得日が異なります。本ページは機械的なスクリーニング結果であり、投資を推奨するものではありません。最終判断は有価証券報告書・決算短信をご確認のうえご自身で行ってください。
   </footer>
@@ -270,7 +270,8 @@
     const r = state.rows.find(x => x.code === code); if (!r) return;
     state.selected = code;
     const sc = r.sc || {};
-    const fin = (r.ni || []).map((x, i) => `<tr><td>${x[0]}</td><td>${fmt.okuS((r.rev || [])[i] ? r.rev[i][1] : null)}</td><td class="${x[1] < 0 ? 'down' : ''}">${fmt.okuS(x[1])}</td></tr>`).join('');
+    const byDate = (arr, d) => { const f = (arr || []).find(x => x[0] === d); return f ? f[1] : null; };
+    const fin = (r.ni || []).map(x => `<tr><td>${x[0]}</td><td>${fmt.okuS(byDate(r.rev, x[0]))}</td><td class="${(byDate(r.oi, x[0]) || 0) < 0 ? 'down' : ''}">${fmt.okuS(byDate(r.oi, x[0]))}</td><td class="${x[1] < 0 ? 'down' : ''}">${fmt.okuS(x[1])}</td></tr>`).join('');
     $('detailCard').innerHTML = `
       <div class="detail">
         <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap">
@@ -285,7 +286,7 @@
           <div><span>時価総額</span><b>${fmt.okuS(r.mc)}</b></div>
           <div><span>PBR</span><b>${fmt.x(r.pbr)}</b></div>
           <div><span>PER（実績 / 予想）</span><b>${fmt.x1(r.per)} / ${fmt.x1(r.fper)}</b></div>
-          <div><span>ピークPER（時価総額÷過去ピーク純利益）</span><b>${fmt.x1(r.peakper)}</b></div>
+          <div><span>ピークPER（時価総額÷ピーク${esc(r.peakbase || '利益')}）</span><b>${fmt.x1(r.peakper)}</b></div>
           <div><span>直近純利益 ÷ ピーク</span><b>${fmt.pct0(r.trough)}</b></div>
           <div><span>10年高値からの下落率</span><b>${r.dd == null ? '–' : (r.dd * 100).toFixed(0) + '%'}</b></div>
           <div><span>52週 安値 / 高値</span><b>${fmt.yen(r.lo52)} / ${fmt.yen(r.hi52)}</b></div>
@@ -298,7 +299,7 @@
           <div><span>配当利回り</span><b>${fmt.pct(r.div)}</b></div>
           <div><span>データ取得日</span><b>${r.at || '–'}</b></div>
         </div>
-        <div class="fin table-wrap"><table><thead><tr><th>決算期</th><th>売上高</th><th>純利益</th></tr></thead><tbody>${fin || '<tr><td colspan="3" class="muted">財務データなし</td></tr>'}</tbody></table></div>
+        <div class="fin table-wrap"><table><thead><tr><th>決算期</th><th>売上高</th><th>営業利益</th><th>純利益</th></tr></thead><tbody>${fin || '<tr><td colspan="4" class="muted">財務データなし</td></tr>'}</tbody></table></div>
         <div class="links">
           <a href="https://kabutan.jp/stock/?code=${r.code}" target="_blank" rel="noopener">株探</a>
           <a href="https://kabutan.jp/stock/finance?code=${r.code}" target="_blank" rel="noopener">株探 業績</a>
