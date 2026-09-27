@@ -120,7 +120,7 @@
   <div class="legend" id="legend" aria-label="表示する指数の切り替え"></div>
 
   <footer>
-    起点日の終値を100として指数化。株価指数は各市場の現地通貨建て、ドル円は1ドル＝円。データ提供：Stooq／Yahoo Finance（1日数回自動更新、終値ベース）。チップをタップすると表示／非表示を切り替えられます。
+    起点日の終値を100として指数化。株価指数は各市場の現地通貨建て、ドル円は1ドル＝円。TOPIXは連動ETF（1306）の価格で代用。データ提供：Stooq／Yahoo Finance（1日数回自動更新、終値ベース）。チップをタップすると表示／非表示を切り替えられます。
   </footer>
 </div>
 
@@ -129,7 +129,7 @@
   'use strict';
   const SERIES = [
     { key: 'n225',   name: '日経平均',     region: '日本',   color: 'var(--s1)', on: true },
-    { key: 'topix',  name: 'TOPIX',        region: '日本',   color: 'var(--s3)', on: true },
+    { key: 'topix',  name: 'TOPIX(ETF)',   region: '日本',   color: 'var(--s3)', on: true },
     { key: 'spx',    name: 'S&P500',       region: '米国',   color: 'var(--s2)', on: true },
     { key: 'ndq',    name: 'NASDAQ',       region: '米国',   color: 'var(--s4)', on: true },
     { key: 'dji',    name: 'NYダウ',       region: '米国',   color: 'var(--s5)', on: false },

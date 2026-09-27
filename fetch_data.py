@@ -9,7 +9,7 @@ YEARS = 6
 # key: (yahoo, fred, stooq)
 SYMBOLS = {
     "n225":   ("^N225",     "NIKKEI225", "^nkx"),
-    "topix":  ("^TPX",      None,        "^tpx"),
+    "topix":  ("1306.T",    None,        "^tpx"),   # TOPIX本体はYahooに無いため連動ETF(1306)で代用
     "spx":    ("^GSPC",     "SP500",     "^spx"),
     "ndq":    ("^IXIC",     "NASDAQCOM", "^ndq"),
     "dji":    ("^DJI",      "DJIA",      "^dji"),
