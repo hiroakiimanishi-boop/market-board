@@ -1,0 +1,365 @@
+{
+ "note": "模擬売買の候補銘柄。value=たーちゃん式シクリカルバリュー上位、momentum=52週高値圏、highvol=値動きが大きい、large=TOPIX Core30",
+ "stocks": [
+  {
+   "code": "7201",
+   "name": "日産自動車",
+   "group": "value",
+   "sector": "輸送用機器",
+   "market": "プライム",
+   "price_at": "2026-10-23",
+   "price": 268.7
+  },
+  {
+   "code": "5408",
+   "name": "中山製鋼所",
+   "group": "value",
+   "sector": "鉄鋼",
+   "market": "プライム",
+   "price_at": "2026-10-23",
+   "price": 581.0
+  },
+  {
+   "code": "5949",
+   "name": "ユニプレス",
+   "group": "value",
+   "sector": "輸送用機器",
+   "market": "プライム",
+   "price_at": "2026-10-23",
+   "price": 1257.0
+  },
+  {
+   "code": "6464",
+   "name": "ツバキ・ナカシマ",
+   "group": "value",
+   "sector": "機械",
+   "market": "プライム",
+   "price_at": "2026-10-23",
+   "price": 295.0
+  },
+  {
+   "code": "2168",
+   "name": "パソナグループ",
+   "group": "value",
+   "sector": "サービス業",
+   "market": "プライム",
+   "price_at": "2026-10-24",
+   "price": 1458.0
+  },
+  {
+   "code": "8281",
+   "name": "ゼビオホールディングス",
+   "group": "value",
+   "sector": "小売業",
+   "market": "プライム",
+   "price_at": "2026-10-24",
+   "price": 1097.0
+  },
+  {
+   "code": "7261",
+   "name": "マツダ",
+   "group": "value",
+   "sector": "輸送用機器",
+   "market": "プライム",
+   "price_at": "2026-10-23",
+   "price": 1085.0
+  },
+  {
+   "code": "7915",
+   "name": "ＮＩＳＳＨＡ",
+   "group": "value",
+   "sector": "その他製品",
+   "market": "プライム",
+   "price_at": "2026-10-24",
+   "price": 1109.0
+  },
+  {
+   "code": "9501",
+   "name": "東京電力ホールディングス",
+   "group": "value",
+   "sector": "電気・ガス業",
+   "market": "プライム",
+   "price_at": "2026-10-24",
+   "price": 500.0
+  },
+  {
+   "code": "5410",
+   "name": "合同製鐵",
+   "group": "value",
+   "sector": "鉄鋼",
+   "market": "プライム",
+   "price_at": "2026-10-23",
+   "price": 2811.0
+  },
+  {
+   "code": "5932",
+   "name": "三協立山",
+   "group": "value",
+   "sector": "金属製品",
+   "market": "プライム",
+   "price_at": "2026-10-23",
+   "price": 774.0
+  },
+  {
+   "code": "7414",
+   "name": "小野建",
+   "group": "value",
+   "sector": "卸売業",
+   "market": "プライム",
+   "price_at": "2026-10-24",
+   "price": 1356.0
+  },
+  {
+   "code": "4475",
+   "name": "ＨＥＮＮＧＥ",
+   "group": "momentum",
+   "sector": "情報・通信業",
+   "market": "グロース",
+   "price_at": "2026-10-25",
+   "price": 2470.0
+  },
+  {
+   "code": "2492",
+   "name": "インフォマート",
+   "group": "momentum",
+   "sector": "サービス業",
+   "market": "プライム",
+   "price_at": "2026-10-24",
+   "price": 789.0
+  },
+  {
+   "code": "2371",
+   "name": "カカクコム",
+   "group": "momentum",
+   "sector": "サービス業",
+   "market": "プライム",
+   "price_at": "2026-10-24",
+   "price": 3760.0
+  },
+  {
+   "code": "3762",
+   "name": "テクマトリックス",
+   "group": "momentum",
+   "sector": "情報・通信業",
+   "market": "プライム",
+   "price_at": "2026-10-25",
+   "price": 3485.0
+  },
+  {
+   "code": "9889",
+   "name": "ＪＢＣＣホールディングス",
+   "group": "momentum",
+   "sector": "情報・通信業",
+   "market": "プライム",
+   "price_at": "2026-10-24",
+   "price": 2343.0
+  },
+  {
+   "code": "8032",
+   "name": "日本紙パルプ商事",
+   "group": "momentum",
+   "sector": "卸売業",
+   "market": "プライム",
+   "price_at": "2026-10-24",
+   "price": 1354.0
+  },
+  {
+   "code": "4565",
+   "name": "ネクセラファーマ",
+   "group": "momentum",
+   "sector": "医薬品",
+   "market": "プライム",
+   "price_at": "2026-10-24",
+   "price": 1343.0
+  },
+  {
+   "code": "6724",
+   "name": "セイコーエプソン",
+   "group": "momentum",
+   "sector": "電気機器",
+   "market": "プライム",
+   "price_at": "2026-10-23",
+   "price": 3332.0
+  },
+  {
+   "code": "2384",
+   "name": "ＳＢＳホールディングス",
+   "group": "momentum",
+   "sector": "陸運業",
+   "market": "プライム",
+   "price_at": "2026-10-24",
+   "price": 5970.0
+  },
+  {
+   "code": "3864",
+   "name": "三菱製紙",
+   "group": "momentum",
+   "sector": "パルプ・紙",
+   "market": "プライム",
+   "price_at": "2026-10-25",
+   "price": 1238.0
+  },
+  {
+   "code": "3103",
+   "name": "ユニチカ",
+   "group": "highvol",
+   "sector": "繊維製品",
+   "market": "スタンダード",
+   "price_at": "2026-10-24",
+   "price": 1200.0
+  },
+  {
+   "code": "6613",
+   "name": "ＱＤレーザ",
+   "group": "highvol",
+   "sector": "電気機器",
+   "market": "グロース",
+   "price_at": "2026-10-23",
+   "price": 2001.0
+  },
+  {
+   "code": "4588",
+   "name": "オンコリスバイオファーマ",
+   "group": "highvol",
+   "sector": "医薬品",
+   "market": "グロース",
+   "price_at": "2026-10-24",
+   "price": 5930.0
+  },
+  {
+   "code": "6976",
+   "name": "太陽誘電",
+   "group": "highvol",
+   "sector": "電気機器",
+   "market": "プライム",
+   "price_at": "2026-10-23",
+   "price": 8364.0
+  },
+  {
+   "code": "5801",
+   "name": "古河電気工業",
+   "group": "highvol",
+   "sector": "非鉄金属",
+   "market": "プライム",
+   "price_at": "2026-10-23",
+   "price": 2756.5
+  },
+  {
+   "code": "6227",
+   "name": "ＡＩメカテック",
+   "group": "highvol",
+   "sector": "機械",
+   "market": "スタンダード",
+   "price_at": "2026-10-23",
+   "price": 5610.0
+  },
+  {
+   "code": "4392",
+   "name": "ＦＩＧ",
+   "group": "highvol",
+   "sector": "情報・通信業",
+   "market": "プライム",
+   "price_at": "2026-10-25",
+   "price": 725.0
+  },
+  {
+   "code": "5537",
+   "name": "ＡｌｂａＬｉｎｋ",
+   "group": "highvol",
+   "sector": "不動産業",
+   "market": "グロース",
+   "price_at": "2026-10-23",
+   "price": 3520.0
+  },
+  {
+   "code": "7203",
+   "name": "トヨタ自動車",
+   "group": "large",
+   "sector": "輸送用機器",
+   "market": "プライム",
+   "price_at": "2026-10-23",
+   "price": 3105.0
+  },
+  {
+   "code": "6501",
+   "name": "日立製作所",
+   "group": "large",
+   "sector": "電気機器",
+   "market": "プライム",
+   "price_at": "2026-10-23",
+   "price": 5562.0
+  },
+  {
+   "code": "8306",
+   "name": "三菱ＵＦＪフィナンシャル・グループ",
+   "group": "large",
+   "sector": "銀行業",
+   "market": "プライム",
+   "price_at": "2026-10-24",
+   "price": 3295.0
+  },
+  {
+   "code": "6758",
+   "name": "ソニーグループ",
+   "group": "large",
+   "sector": "電気機器",
+   "market": "プライム",
+   "price_at": "2026-10-23",
+   "price": 4137.0
+  },
+  {
+   "code": "8035",
+   "name": "東京エレクトロン",
+   "group": "large",
+   "sector": "電気機器",
+   "market": "プライム",
+   "price_at": "2026-10-24",
+   "price": 9458.0
+  },
+  {
+   "code": "7011",
+   "name": "三菱重工業",
+   "group": "large",
+   "sector": "機械",
+   "market": "プライム",
+   "price_at": "2026-10-23",
+   "price": 3614.0
+  },
+  {
+   "code": "6857",
+   "name": "アドバンテスト",
+   "group": "large",
+   "sector": "電気機器",
+   "market": "プライム",
+   "price_at": "2026-10-23",
+   "price": 32340.0
+  },
+  {
+   "code": "9983",
+   "name": "ファーストリテイリング",
+   "group": "large",
+   "sector": "小売業",
+   "market": "プライム",
+   "price_at": "2026-10-24",
+   "price": 75880.0
+  },
+  {
+   "code": "8058",
+   "name": "三菱商事",
+   "group": "large",
+   "sector": "卸売業",
+   "market": "プライム",
+   "price_at": "2026-10-24",
+   "price": 4715.0
+  },
+  {
+   "code": "7974",
+   "name": "任天堂",
+   "group": "large",
+   "sector": "その他製品",
+   "market": "プライム",
+   "price_at": "2026-10-24",
+   "price": 8539.0
+  }
+ ]
+}

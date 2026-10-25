@@ -1,0 +1,34 @@
+name: 模擬売買用の個別株日足を更新
+
+on:
+  schedule:
+    # UTC 07:40 = 日本時間 16:40（東証の引け後）、平日のみ
+    - cron: "40 7 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: paper-trade
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: ライブラリ導入
+        run: pip install -q curl_cffi
+      - name: 個別株の日足を取得
+        run: python paper_trade.py
+      - name: 変更があればコミット
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add paper_prices.json
+          git diff --cached --quiet && echo "変更なし" || (git commit -m "paper: $(date -u +'%Y-%m-%d %H:%M UTC')" && git pull --rebase && git push)
