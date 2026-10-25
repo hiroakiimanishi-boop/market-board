@@ -9,7 +9,7 @@ on:
     - cron: "0 21 * * *"
   push:
     branches: [main]
-    paths-ignore: ["data.json", "stocks.json", "universe.json", "paper_prices.json", "paper_universe.json", "paper_trade.py", ".github/workflows/paper_trade.yml"]
+    paths-ignore: ["data.json", "stocks.json", "universe.json", "paper_universe.json", "paper_trade.py", ".github/workflows/paper_trade.yml"]
   workflow_dispatch:
     inputs:
       batch:
@@ -54,6 +54,7 @@ jobs:
         run: |
           mkdir -p site
           cp index.html stocks.html data.json site/
+          cp paper.html paper_prices.json site/ 2>/dev/null || true
           cp stocks.json site/ 2>/dev/null || echo '{"meta":{"updated":"","universe":0,"scanned":0},"stocks":{}}' > site/stocks.json
       - uses: actions/upload-pages-artifact@v3
         with:

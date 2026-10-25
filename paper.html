@@ -1,0 +1,431 @@
+<title>個別株 模擬売買</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* レイアウト: 条件 → 結果（数字→推移→保有銘柄→日誌）→ 選び方×ルールの比較 → 先行き。前作「50万→150万」と同じ配色・書体 */
+:root{
+  --bg:#F2F4F8; --surface:#FFFFFF; --surface-2:#EAEEF5; --line:#D5DBE6; --fg:#141A26; --muted:#5C6678;
+  --ink:#1B2A4A; --ink-fg:#FFFFFF;
+  --up:#D23F31; --up-soft:#FBE9E6; --down:#2B6CD9; --down-soft:#E5EEFB; --gold:#B07C12; --gold-soft:#F7EFDC;
+  --band1:#CBD5E7; --band2:#A3B4D2; --grid:#E3E8F0;
+  --s1:#2F5AB8; --s2:#EB6834; --s3:#1BAF7A; --s4:#8A5CD6;
+  --font-display:'Shippori Mincho B1','Hiragino Mincho ProN','Yu Mincho','YuMincho',serif;
+  --font-body:'Zen Kaku Gothic New','Hiragino Sans','Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif;
+  --font-num:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E131B; --surface:#161C27; --surface-2:#1E2633; --line:#2B3545; --fg:#E7ECF3; --muted:#9AA5B7;
+    --ink:#D7E0F0; --ink-fg:#0E131B;
+    --up:#E8625A; --up-soft:#3A2220; --down:#4F8FEA; --down-soft:#1B2A45; --gold:#B08626; --gold-soft:#332A14;
+    --band1:#273449; --band2:#3B4D6E; --grid:#232D3C;
+    --s1:#6E93E0; --s2:#D95926; --s3:#199E70; --s4:#9085E9;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E131B; --surface:#161C27; --surface-2:#1E2633; --line:#2B3545; --fg:#E7ECF3; --muted:#9AA5B7;
+  --ink:#D7E0F0; --ink-fg:#0E131B;
+  --up:#E8625A; --up-soft:#3A2220; --down:#4F8FEA; --down-soft:#1B2A45; --gold:#B08626; --gold-soft:#332A14;
+  --band1:#273449; --band2:#3B4D6E; --grid:#232D3C;
+  --s1:#6E93E0; --s2:#D95926; --s3:#199E70; --s4:#9085E9;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.7;font-size:15px;-webkit-text-size-adjust:100%}
+.wrap{max-width:980px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 56px;display:flex;flex-direction:column;gap:26px}
+h1,h2,h3{font-family:var(--font-display);font-weight:700;line-height:1.3;margin:0;text-wrap:balance}
+h1{font-size:clamp(28px,5vw,40px);letter-spacing:.01em}
+h2{font-size:21px}
+h3{font-size:15px}
+p{margin:0}
+.eyebrow{font-size:12px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;font-weight:500}
+.lead{max-width:38em;color:var(--muted)}
+.num{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:500}
+header{display:flex;flex-direction:column;gap:12px}
+header .meta{display:flex;flex-wrap:wrap;gap:8px 18px;color:var(--muted);font-size:13px}
+header .meta b{color:var(--fg);font-weight:500}
+.card{background:var(--surface);border:1px solid var(--line);padding:20px;display:flex;flex-direction:column;gap:16px}
+.card-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 16px}
+.card-head .hint{font-size:13px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--fg);font:inherit;font-size:13px;padding:7px 12px;border-radius:999px;cursor:pointer;line-height:1.3}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--ink-fg);border-color:var(--ink)}
+.chip.small{font-size:12px;padding:5px 10px}
+.chip:focus-visible,.seg button:focus-visible,.btn:focus-visible{outline:2px solid var(--down);outline-offset:2px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex-wrap:wrap}
+.seg button{appearance:none;border:0;background:transparent;color:var(--fg);font:inherit;font-size:13px;padding:7px 14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface-2);font-weight:700}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+.row .desc{font-size:13px;color:var(--muted);flex:1 1 240px;min-width:0}
+.row label{font-size:14px;font-weight:500}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px 28px}
+.ctl{display:flex;flex-direction:column;gap:4px;min-width:0}
+.ctl .hdr{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.ctl label{font-size:14px;font-weight:500}
+.ctl .v{font-size:16px}
+.ctl .desc{font-size:12px;color:var(--muted)}
+input[type=range]{width:100%;accent-color:var(--ink);margin:4px 0}
+input[type=date]{font:inherit;font-family:var(--font-num);font-size:14px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--fg);min-width:0}
+.picklist{display:flex;flex-wrap:wrap;gap:6px}
+.picklist .chip{font-size:12px;padding:4px 10px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);padding:14px 16px;display:flex;flex-direction:column;gap:2px;min-width:0;border-top:3px solid var(--line)}
+.kpi .lbl{font-size:12px;color:var(--muted)}
+.kpi .val{font-size:28px;line-height:1.15}
+.kpi .sub{font-size:12px;color:var(--muted)}
+.kpi.main{border-top-color:var(--ink)}
+.kpi.pos .val{color:var(--up)} .kpi.neg .val{color:var(--down)}
+.kpi.pos{border-top-color:var(--up)} .kpi.neg{border-top-color:var(--down)}
+.callout{background:var(--surface-2);padding:12px 14px;font-size:14px;line-height:1.7;border-left:3px solid var(--gold)}
+.chart{width:100%;min-width:0;position:relative}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart text{font-family:var(--font-num);font-size:11px;fill:var(--muted)}
+.chart .lab-ja{font-family:var(--font-body);font-size:11px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:18px;height:0;border-top:2px solid var(--ink)}
+.legend i.s1{border-top-color:var(--s1)} .legend i.n225{border-top:2px dashed var(--muted)} .legend i.gold{border-top:2px dashed var(--gold)}
+.tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--line);padding:6px 10px;font-size:12px;line-height:1.5;box-shadow:0 4px 14px rgba(0,0,0,.12);white-space:nowrap;display:none;z-index:2}
+.tip .d{color:var(--muted)}
+.tbl-wrap{overflow-x:auto;min-width:0}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;vertical-align:top}
+th{font-weight:500;color:var(--muted);font-size:12px;letter-spacing:.03em}
+th:first-child,td:first-child{text-align:left;white-space:normal;min-width:9em}
+td.num{font-family:var(--font-num);font-variant-numeric:tabular-nums}
+td.pos{color:var(--up)} td.neg{color:var(--down)}
+td .sub{display:block;font-size:11px;color:var(--muted);font-family:var(--font-body)}
+.mark{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;font-family:var(--font-body);font-weight:500;vertical-align:1px}
+.mark.up{background:var(--up-soft);color:var(--up)} .mark.dn{background:var(--down-soft);color:var(--down)} .mark.hold{background:var(--surface-2);color:var(--muted)} .mark.gold{background:var(--gold-soft);color:var(--gold)}
+.grid-cmp td{text-align:center} .grid-cmp th{text-align:center} .grid-cmp td:first-child,.grid-cmp th:first-child{text-align:left}
+.grid-cmp td.cur{outline:2px solid var(--ink);outline-offset:-2px;font-weight:700}
+.foot{font-size:12px;color:var(--muted)}
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:18px 32px}
+@media (max-width:440px){.notes{grid-template-columns:1fr}}
+.notes h3{margin-bottom:6px}
+.notes p{font-size:14px}
+details{border-top:1px solid var(--line);padding-top:10px}
+summary{cursor:pointer;font-size:14px;font-weight:500;color:var(--ink)}
+details .tbl-wrap{margin-top:10px}
+footer{font-size:12px;color:var(--muted);line-height:1.7;max-width:60em}
+.loading{color:var(--muted);font-size:14px}
+@media (max-width:480px){.card{padding:16px}.kpi .val{font-size:24px}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">個別株 ペーパートレード</div>
+    <h1>50万円で、個別株を売買してみる。</h1>
+    <p class="lead">実在する40銘柄の日足で、銘柄の選び方と売買ルールを決めて1か月を再生します。買値・株数・手数料・信用金利まで実際の口座と同じ計算で、取引はすべて日誌に残ります。</p>
+    <div class="meta"><span>元手 <b class="num">500,000円</b></span><span>候補 <b>40銘柄</b></span><span>日足 <b class="num" id="metaRange">—</b></span><span>更新 <b class="num" id="metaUpd">—</b></span></div>
+  </header>
+
+  <section class="card" aria-labelledby="h-set">
+    <div class="card-head"><h2 id="h-set">条件</h2><span class="hint">変えると即座に再計算します</span></div>
+    <div class="row"><label>銘柄の選び方</label><div class="chips" id="pickChips" role="group"></div></div>
+    <p class="row desc" id="pickDesc"></p>
+    <div class="picklist" id="customList" hidden></div>
+    <div class="row"><label>売買ルール</label>
+      <div class="seg" role="group" id="ruleSeg"><button type="button" data-rule="hold">買って持つ</button><button type="button" data-rule="tpsl">利確・損切り</button><button type="button" data-rule="ma">5日／25日線クロス</button></div>
+      <span class="desc" id="ruleDesc"></span></div>
+    <div class="controls">
+      <div class="ctl" id="ctlTp"><div class="hdr"><label for="tp">利確ライン</label><span class="v num" id="tpV"></span></div><input type="range" id="tp" min="3" max="30" step="1" value="10"><span class="desc">買値からこの率だけ上がったら売る（日中の高値で判定）</span></div>
+      <div class="ctl" id="ctlSl"><div class="hdr"><label for="sl">損切りライン</label><span class="v num" id="slV"></span></div><input type="range" id="sl" min="2" max="20" step="1" value="5"><span class="desc">買値からこの率だけ下がったら売る（日中の安値で判定、窓開けは始値）</span></div>
+      <div class="ctl"><div class="hdr"><label for="lev">レバレッジ</label><span class="v num" id="levV"></span></div><input type="range" id="lev" min="1" max="3.3" step="0.1" value="1"><span class="desc">1.0＝現物。超過分は信用取引として年2.8%の金利</span></div>
+      <div class="ctl"><div class="hdr"><label for="days">期間（営業日）</label><span class="v num" id="daysV"></span></div><input type="range" id="days" min="5" max="63" step="1" value="21"><span class="desc">データの最終日で打ち切り</span></div>
+    </div>
+    <div class="row">
+      <label for="startDate">起点の日付</label><input type="date" id="startDate" value="2026-09-25">
+      <div class="chips" id="startChips" role="group"></div>
+      <div class="seg" role="group" id="lotSeg"><button type="button" data-lot="one">1株単位</button><button type="button" data-lot="hundred">100株単位</button></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-res" style="display:flex;flex-direction:column;gap:12px">
+    <h2 id="h-res">結果</h2>
+    <p class="foot" id="resNote"></p>
+    <div class="kpis">
+      <div class="kpi main"><div class="lbl">最終資産</div><div class="val num" id="kFinal">—</div><div class="sub" id="kFinalSub"></div></div>
+      <div class="kpi" id="kPnlBox"><div class="lbl">損益</div><div class="val num" id="kPnl">—</div><div class="sub" id="kPnlSub"></div></div>
+      <div class="kpi"><div class="lbl">途中の最大下落</div><div class="val num" id="kDd">—</div><div class="sub">最高額からの落ち込み</div></div>
+      <div class="kpi"><div class="lbl">同じ期間の日経225</div><div class="val num" id="kN225">—</div><div class="sub">50万円を指数に置いた場合</div></div>
+    </div>
+    <div class="callout" id="callout"></div>
+  </section>
+
+  <section class="card" aria-labelledby="h-eq">
+    <div class="card-head"><h2 id="h-eq">資産の推移</h2><span class="hint">日々の終値で評価した口座残高</span></div>
+    <div class="legend"><span><i class="s1"></i>この売買</span><span><i class="n225"></i>日経225に50万円</span><span><i class="gold"></i>元手</span></div>
+    <div class="chart" id="eqChart"><div class="tip" id="eqTip"></div></div>
+  </section>
+
+  <section class="card" aria-labelledby="h-pos">
+    <div class="card-head"><h2 id="h-pos">保有銘柄</h2><span class="hint">銘柄ごとの損益</span></div>
+    <div class="chart" id="barChart"></div>
+    <div class="tbl-wrap"><table id="posTbl"><thead><tr><th>銘柄</th><th>株数</th><th>買値</th><th>売値／直近</th><th>損益</th><th>損益率</th><th>状態</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="card" aria-labelledby="h-log">
+    <div class="card-head"><h2 id="h-log">取引日誌</h2><span class="hint" id="logHint"></span></div>
+    <div class="tbl-wrap"><table id="logTbl"><thead><tr><th>日付</th><th>銘柄</th><th>売買</th><th>株数</th><th>単価</th><th>金額</th><th>損益</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="card" aria-labelledby="h-cmp">
+    <div class="card-head"><h2 id="h-cmp">選び方 × ルール</h2><span class="hint">同じ起点・期間・レバレッジで12通りの最終資産</span></div>
+    <div class="tbl-wrap"><table id="cmpTbl" class="grid-cmp"><thead><tr><th>選び方</th><th>買って持つ</th><th>利確・損切り</th><th>5日／25日線クロス</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="card" aria-labelledby="h-fwd">
+    <div class="card-head"><h2 id="h-fwd">先行き — この5銘柄で10/26から21営業日</h2><span class="hint">過去6か月の値動きを1万通り並べ替えて試算</span></div>
+    <div class="kpis">
+      <div class="kpi pos"><div class="lbl">3倍（150万円）に到達</div><div class="val num" id="fHit">—</div><div class="sub">期間中に一度でも</div></div>
+      <div class="kpi"><div class="lbl">+10%以上で終える</div><div class="val num" id="fP10">—</div><div class="sub">55万円以上</div></div>
+      <div class="kpi main"><div class="lbl">最終資産の中央値</div><div class="val num" id="fMed">—</div><div class="sub" id="fMedSub"></div></div>
+      <div class="kpi neg"><div class="lbl">退場（15万円未満）</div><div class="val num" id="fRuin">—</div><div class="sub">元手の30%を割る</div></div>
+    </div>
+    <p class="foot">選んだ銘柄の過去6か月の日次騰落率を、同じ日の組み合わせのまま無作為に並べ替えて21日分つなぐ（銘柄どうしの連動は保つ）。各銘柄の平均騰落率は0に補正し、直近の上昇・下落の勢いが続くとは仮定しない。買って持つ前提、現在のレバレッジを適用。</p>
+  </section>
+
+  <section class="card" aria-labelledby="h-notes">
+    <h2 id="h-notes">計算の前提</h2>
+    <div class="notes">
+      <div><h3>候補40銘柄の選び方</h3><p>10/23時点のスクリーナー（たーちゃん式シクリカルバリュー上位12、52週高値圏10、値動きの大きい8、TOPIX Core30から10）。候補は「今」の情報で選んでいるので、9月以前を起点にした再生には後出しが混ざる。10/26以降の先行きと追跡にはこの偏りはない。</p></div>
+      <div><h3>約定と費用</h3><p>買いは起点日の終値、ルールによる売りは判定した価格（利確・損切りは日中の高値・安値、クロスは終値）。売買手数料0.05%、信用部分に年2.8%の金利。配当・貸株料・税金は含まない。</p></div>
+      <div><h3>銘柄選びのルールは起点日の情報だけで決める</h3><p>モメンタムと高ボラは起点日までの60営業日の値動きから機械的に選ぶ。バリューはスクリーナーの財務スコア（直近の決算）。大型は固定。</p></div>
+      <div><h3>退場</h3><p>口座残高が元手の30%（15万円）を割った日に全部売って終了。信用取引では残高がマイナスになることもあり、その場合は追加の入金が必要になる。</p></div>
+    </div>
+  </section>
+
+  <footer>データ: market-board の paper_prices.json（Yahoo Finance、個別株の日足）と data.json（日経225）。GitHub Actions が毎営業日16:40に更新。</footer>
+</div>
+
+<script id="data" type="application/json">null</script>
+<script>
+(function(){
+'use strict';
+const START=500000, COMM=0.0005, RATE=0.028/250, RUIN=0.3, COST=0.0003, PATHS=10000;
+const PICKS=[
+  {id:'value',name:'バリュー5銘柄',desc:'たーちゃん式シクリカルバリューのスコア（資産割安・底値圏・業績の谷・潜在収益力・生存力・配当）が高い順に5銘柄。'},
+  {id:'momentum',name:'モメンタム5銘柄',desc:'起点日の時点で直近60営業日の高値から5%以内にあり、60日騰落率が大きい順に5銘柄。'},
+  {id:'highvol',name:'高ボラ5銘柄',desc:'起点日までの60営業日で、日々の値動き（標準偏差）が大きい順に5銘柄。'},
+  {id:'large',name:'大型5銘柄',desc:'TOPIX Core30から時価総額上位：トヨタ・日立・三菱UFJ・ソニー・東京エレクトロン。'},
+  {id:'custom',name:'自分で選ぶ',desc:'40銘柄から最大10銘柄。等金額で買う。'},
+];
+const LARGE=['7203','6501','8306','6758','8035'];
+const RULES={hold:'起点日の終値で買い、期間の終わりまで持つ。',tpsl:'起点日の終値で買い、利確か損切りのラインに触れた日に売って現金のまま。',ma:'5日移動平均が25日線を上回っている間だけ持つ。下回ったら終値で売り、再び上回れば買い直す。'};
+const JW=['日','月','火','水','木','金','土'];
+const isoJa=(iso,y)=>{const [a,b,c]=iso.split('-').map(Number);return (y?a+'/':'')+b+'/'+c+'（'+JW[new Date(a,b-1,c).getDay()]+'）';};
+const isoShort=iso=>{const [a,b,c]=iso.split('-').map(Number);return b+'/'+c;};
+const fmtYen=x=>(x<0?'−':'')+Math.round(Math.abs(x)).toLocaleString('ja-JP')+'円';
+const fmtSYen=x=>(x>=0?'+':'−')+Math.round(Math.abs(x)).toLocaleString('ja-JP')+'円';
+const fmtPct=x=>(x>=0?'+':'−')+(Math.abs(x)*100).toFixed(1)+'%';
+const fmtP=x=>x===0?'0%':x<0.0005?'<0.1%':(x*100).toFixed(1)+'%';
+const fmtMan=x=>(x/10000).toLocaleString('ja-JP',{maximumFractionDigits:1,minimumFractionDigits:1})+'万円';
+const $=id=>document.getElementById(id);
+const state={pick:'value',custom:[],rule:'hold',tp:0.10,sl:0.05,L:1,N:21,start:'2026-09-25',lot:'one'};
+let D=null;
+
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function idx(date){let i=D.dates.findIndex(x=>x>=date);if(i<0)i=D.dates.length-1;if(D.dates[i]!==date)i=Math.max(0,i-1);return i;}
+function ma(c,t,n){if(t<n-1)return null;let s=0;for(let j=t-n+1;j<=t;j++)s+=c[j];return s/n;}
+function sdOf(arr){if(!arr.length)return 0;const m=arr.reduce((a,b)=>a+b,0)/arr.length;return Math.sqrt(arr.reduce((a,b)=>a+(b-m)*(b-m),0)/arr.length);}
+
+/* ---------- 銘柄選び ---------- */
+function pickCodes(i0){
+  const codes=Object.keys(D.stocks);
+  if(state.pick==='value'){ return codes.filter(c=>D.stocks[c].group==='value').sort((a,b)=>(D.stocks[b].score||0)-(D.stocks[a].score||0)).slice(0,5); }
+  if(state.pick==='momentum'){ const a=Math.max(0,i0-60); const list=codes.map(c=>{const p=D.stocks[c].c; let hi=0; for(let j=a;j<=i0;j++) hi=Math.max(hi,p[j]); return {c,ret:p[i0]/p[a]-1,near:p[i0]/hi};}); const ok=list.filter(x=>x.near>=0.95).sort((x,y)=>y.ret-x.ret); const rest=list.filter(x=>x.near<0.95).sort((x,y)=>y.ret-x.ret); return ok.concat(rest).slice(0,5).map(x=>x.c); }
+  if(state.pick==='highvol'){ const a=Math.max(1,i0-60); return codes.map(c=>{const p=D.stocks[c].c; const r=[]; for(let j=a;j<=i0;j++) r.push(p[j]/p[j-1]-1); return {c,sd:sdOf(r)};}).sort((x,y)=>y.sd-x.sd).slice(0,5).map(x=>x.c); }
+  if(state.pick==='large') return LARGE.slice();
+  return state.custom.slice(0,10);
+}
+
+/* ---------- 1銘柄の売買 ---------- */
+function simStock(code,i0,i1,B,cfg){
+  const s=D.stocks[code]; const o=s.o,h=s.h,l=s.l,c=s.c;
+  let cash=B,shares=0,loan=0,buyPx=null,status='未購入',blocked=false; const events=[],eq=[]; const unit=cfg.lot==='hundred'?100:1; const L=cfg.L;
+  const buy=(t,px,act)=>{ const n=Math.floor(L*B/(px*unit))*unit; if(n<=0){status='買えず（単元が予算超）';blocked=true;return false;} const cost=n*px,fee=cost*COMM; loan=Math.max(0,cost+fee-cash); cash=cash-cost-fee+loan; shares=n; buyPx=px; status='保有中'; events.push({t,code,name:s.name,act,px,n,amt:cost}); return true; };
+  const sell=(t,px,act,st)=>{ const pro=shares*px,fee=pro*COMM; cash+=pro-fee-loan; loan=0; events.push({t,code,name:s.name,act,px,n:shares,amt:pro,pnl:(px-buyPx)*shares-fee}); shares=0; status=st; };
+  let exitPx=null;
+  if(cfg.rule==='ma'){ const f=ma(c,i0,5),sl=ma(c,i0,25); if(f!==null&&sl!==null&&f>sl) buy(i0,c[i0],'買い（5日線が上）'); else status='待機（5日線が下）'; }
+  else buy(i0,c[i0],'買い');
+  eq.push(cash+shares*c[i0]-loan);
+  for(let t=i0+1;t<=i1;t++){
+    if(loan>0) loan+=loan*RATE;
+    if(shares>0&&cfg.rule==='tpsl'){ const stop=buyPx*(1-cfg.sl),tp=buyPx*(1+cfg.tp);
+      if(l[t]<=stop){ const px=Math.min(o[t],stop); sell(t,px,'損切り','損切り'); exitPx=px; }
+      else if(h[t]>=tp){ const px=Math.max(o[t],tp); sell(t,px,'利確','利確'); exitPx=px; } }
+    else if(cfg.rule==='ma'&&!blocked){ const f=ma(c,t,5),sl=ma(c,t,25);
+      if(f!==null&&sl!==null){ if(shares>0&&f<sl){ sell(t,c[t],'売り（デッドクロス）','売却'); exitPx=c[t]; } else if(shares===0&&f>sl) buy(t,c[t],'買い（ゴールデンクロス）'); } }
+    eq.push(cash+shares*c[t]-loan);
+  }
+  const final=eq[eq.length-1];
+  return {code,name:s.name,group:s.group,eq,events,shares,buyPx,lastPx:c[i1],exitPx,status,B,final,pnl:final-B};
+}
+
+function runPortfolio(codes,cfg){
+  const i0=idx(cfg.start), i1=Math.min(D.dates.length-1,i0+cfg.N); const B=START/Math.max(1,codes.length);
+  const subs=codes.map(c=>simStock(c,i0,i1,B,cfg)); const n=i1-i0+1; const eq=new Array(n).fill(0);
+  subs.forEach(s=>s.eq.forEach((v,k)=>eq[k]+=v));
+  let ruinAt=-1; for(let k=1;k<n;k++){ if(eq[k]<=START*RUIN){ruinAt=k;break;} }
+  if(ruinAt>=0){ for(let k=ruinAt+1;k<n;k++) eq[k]=eq[ruinAt]; }
+  let peak=eq[0],mdd=0; eq.forEach(v=>{peak=Math.max(peak,v);mdd=Math.max(mdd,1-v/peak);});
+  const events=[].concat(...subs.map(s=>s.events)).sort((a,b)=>a.t-b.t);
+  if(ruinAt>=0) events.push({t:i0+ruinAt,code:'',name:'全銘柄',act:'退場で全部売却',px:null,n:null,amt:eq[ruinAt]});
+  return {i0,i1,subs,eq,ruinAt,mdd,events,dates:D.dates.slice(i0,i1+1),n225:D.n225.slice(i0,i1+1),final:eq[n-1],codes};
+}
+
+/* ---------- 先行き ---------- */
+function forward(codes,cfg){
+  if(!codes.length) return null;
+  const T=D.dates.length; const R=codes.map(code=>{const c=D.stocks[code].c; const r=new Float64Array(T-1); let m=0; for(let t=1;t<T;t++){r[t-1]=c[t]/c[t-1]-1;m+=r[t-1];} m/=T-1; for(let t=0;t<T-1;t++) r[t]-=m; return r;});
+  const rnd=mulberry32(20261026); const n=codes.length,L=cfg.L,N=21; const cost=L>1?COST*L:0;
+  let hit=0,p10=0,ruin=0; const finals=new Float64Array(PATHS); const e=new Float64Array(n);
+  for(let i=0;i<PATHS;i++){ e.fill(1/n); let done=false,reached=false,tot=1;
+    for(let d=1;d<=N&&!done;d++){ const j=(rnd()*(T-1))|0; tot=0; for(let s=0;s<n;s++){ e[s]=e[s]*Math.max(0,1+L*R[s][j]); e[s]-=e[s]*cost; tot+=e[s]; } if(tot>=3){tot=3;reached=true;done=true;} else if(tot<=RUIN){done=true;} }
+    finals[i]=tot; if(reached)hit++; if(tot>=1.1)p10++; if(tot<=RUIN)ruin++; }
+  const s=Float64Array.from(finals).sort();
+  return {hit:hit/PATHS,p10:p10/PATHS,ruin:ruin/PATHS,median:s[PATHS>>1],p5:s[Math.round(PATHS*0.05)],p95:s[Math.round(PATHS*0.95)]};
+}
+
+/* ---------- UI ---------- */
+function syncUI(){
+  document.querySelectorAll('#pickChips .chip').forEach(c=>c.setAttribute('aria-pressed',c.dataset.id===state.pick));
+  $('pickDesc').textContent=PICKS.find(p=>p.id===state.pick).desc;
+  $('customList').hidden=state.pick!=='custom';
+  document.querySelectorAll('#customList .chip').forEach(c=>c.setAttribute('aria-pressed',state.custom.includes(c.dataset.code)));
+  document.querySelectorAll('#ruleSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.rule===state.rule));
+  $('ruleDesc').textContent=RULES[state.rule];
+  $('ctlTp').hidden=state.rule!=='tpsl'; $('ctlSl').hidden=state.rule!=='tpsl';
+  $('tpV').textContent='+'+Math.round(state.tp*100)+'%'; $('slV').textContent='−'+Math.round(state.sl*100)+'%';
+  $('levV').textContent=state.L.toFixed(1)+'倍'; $('daysV').textContent=state.N+'日';
+  $('startDate').value=state.start;
+  document.querySelectorAll('#startChips .chip').forEach(c=>c.setAttribute('aria-pressed',c.dataset.iso===state.start));
+  document.querySelectorAll('#lotSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.lot===state.lot));
+}
+
+function recalc(){
+  syncUI();
+  const cfg={rule:state.rule,tp:state.tp,sl:state.sl,L:state.L,N:state.N,start:state.start,lot:state.lot};
+  const i0=idx(state.start); const codes=pickCodes(i0);
+  const R=runPortfolio(codes,cfg);
+  renderResult(R,cfg); renderEq(R); renderPositions(R); renderLog(R); renderCompare(cfg,i0); renderForward(codes,cfg);
+}
+
+function renderResult(R,cfg){
+  const s0=R.dates[0],s1=R.dates[R.dates.length-1];
+  let note='起点 '+isoJa(s0,true)+' 終値で買い → '+isoJa(s1,false)+'（'+(R.i1-R.i0)+'営業日）';
+  if(state.start!==s0) note='指定日は休場のため直前の営業日を起点にしました。'+note;
+  if(R.i1-R.i0<cfg.N) note+='　※データが'+isoJa(D.dates[D.dates.length-1],false)+'までのため、'+cfg.N+'営業日のうち'+(R.i1-R.i0)+'日分';
+  $('resNote').textContent=note;
+  const pnl=R.final-START; const nx=START*(R.n225[R.n225.length-1]/R.n225[0]);
+  $('kFinal').textContent=fmtYen(R.final); $('kFinalSub').textContent=R.codes.length+'銘柄・'+(cfg.L>1?'信用'+cfg.L.toFixed(1)+'倍':'現物');
+  $('kPnl').textContent=fmtSYen(pnl); $('kPnlSub').textContent=fmtPct(pnl/START); $('kPnlBox').className='kpi '+(pnl>=0?'pos':'neg');
+  $('kDd').textContent='−'+(R.mdd*100).toFixed(1)+'%';
+  $('kN225').textContent=fmtYen(nx); $('kN225').nextElementSibling.textContent='50万円を指数に置いた場合（'+fmtPct(nx/START-1)+'）';
+  const win=R.subs.filter(s=>s.pnl>0).length, lose=R.subs.filter(s=>s.pnl<0).length;
+  let html='勝ち <b class="num">'+win+'</b>銘柄・負け <b class="num">'+lose+'</b>銘柄。';
+  if(R.ruinAt>=0) html+=' <b>'+isoJa(R.dates[R.ruinAt],false)+'に残高が15万円を割り、退場。</b>';
+  else { const best=R.subs.slice().sort((a,b)=>b.pnl-a.pnl)[0], worst=R.subs.slice().sort((a,b)=>a.pnl-b.pnl)[0]; if(best) html+=' 最も効いたのは '+best.name+'（'+fmtSYen(best.pnl)+'）、最も痛かったのは '+worst.name+'（'+fmtSYen(worst.pnl)+'）。'; }
+  html+=' 日経225との差は <b class="num">'+fmtSYen(R.final-nx)+'</b>。';
+  $('callout').innerHTML=html;
+}
+
+function svgEl(tag,attrs,text){const e=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(text!=null)e.textContent=text;return e;}
+function niceStep(range,n){const raw=range/n;const p=Math.pow(10,Math.floor(Math.log10(raw)));const m=raw/p;return (m<1.5?1:m<3.5?2.5:m<7.5?5:10)*p;}
+
+function renderEq(R){
+  const box=$('eqChart'),tip=$('eqTip'); box.querySelectorAll('svg').forEach(s=>s.remove());
+  const W=Math.max(300,box.clientWidth),H=W<500?240:300,m={l:50,r:16,t:16,b:28};
+  const n=R.eq.length-1; const nx=R.n225.map(v=>START*v/R.n225[0]);
+  let lo=Math.min(...R.eq,...nx,START),hi=Math.max(...R.eq,...nx,START); const pad=(hi-lo)*0.12||START*0.05; lo=Math.max(0,lo-pad); hi+=pad;
+  const x=d=>m.l+(W-m.l-m.r)*(n?d/n:0), y=v=>m.t+(H-m.t-m.b)*(1-(v-lo)/(hi-lo));
+  const svg=svgEl('svg',{viewBox:'0 0 '+W+' '+H,width:W,height:H,role:'img','aria-label':'資産推移'});
+  const step=niceStep((hi-lo)/10000,5); for(let v=Math.ceil(lo/10000/step)*step; v*10000<=hi; v+=step){const yy=y(v*10000); svg.appendChild(svgEl('line',{x1:m.l,x2:W-m.r,y1:yy,y2:yy,stroke:'var(--grid)'})); svg.appendChild(svgEl('text',{x:m.l-6,y:yy+4,'text-anchor':'end'},v+'万'));}
+  const xt=n<=12?2:n<=25?5:n<=45?10:15; for(let d=0;d<=n;d+=xt) svg.appendChild(svgEl('text',{x:x(d),y:H-8,'text-anchor':d===0?'start':'middle'},isoShort(R.dates[d]))); if(n%xt!==0&&n>0) svg.appendChild(svgEl('text',{x:x(n),y:H-8,'text-anchor':'end'},isoShort(R.dates[n])));
+  const y0=y(START); svg.appendChild(svgEl('line',{x1:m.l,x2:W-m.r,y1:y0,y2:y0,stroke:'var(--gold)','stroke-dasharray':'6 4','stroke-width':1.5}));
+  const path=(arr,attrs)=>{let d='';for(let i=0;i<=n;i++)d+=(i?'L':'M')+x(i)+','+y(arr[i])+' ';svg.appendChild(svgEl('path',Object.assign({d:d.trim(),fill:'none','stroke-linejoin':'round'},attrs)));};
+  path(nx,{stroke:'var(--muted)','stroke-width':1.5,'stroke-dasharray':'5 4'});
+  path(R.eq,{stroke:'var(--s1)','stroke-width':2.4});
+  svg.appendChild(svgEl('circle',{cx:x(n),cy:y(R.eq[n]),r:4,fill:'var(--s1)',stroke:'var(--surface)','stroke-width':1.5}));
+  const cross=svgEl('line',{x1:0,x2:0,y1:m.t,y2:H-m.b,stroke:'var(--fg)',opacity:0}); svg.appendChild(cross);
+  svg.appendChild(svgEl('rect',{x:m.l,y:m.t,width:W-m.l-m.r,height:H-m.t-m.b,fill:'transparent',style:'cursor:crosshair'}));
+  box.appendChild(svg);
+  const show=ev=>{const rect=svg.getBoundingClientRect();const px=(ev.touches?ev.touches[0].clientX:ev.clientX)-rect.left;const d=Math.max(0,Math.min(n,Math.round((px-m.l)/(W-m.l-m.r)*n)));cross.setAttribute('x1',x(d));cross.setAttribute('x2',x(d));cross.setAttribute('opacity',.35);tip.style.display='block';tip.innerHTML='<span class="d">'+isoJa(R.dates[d],false)+'</span><br>この売買　<span class="num">'+fmtYen(R.eq[d])+'</span>（'+fmtPct(R.eq[d]/START-1)+'）<br>日経225　<span class="num">'+fmtYen(nx[d])+'</span>（'+fmtPct(nx[d]/START-1)+'）';const tw=tip.offsetWidth;let left=x(d)+12;if(left+tw>W-4)left=x(d)-tw-12;tip.style.left=left+'px';tip.style.top=(m.t+8)+'px';if(ev.cancelable&&ev.touches)ev.preventDefault();};
+  const hide=()=>{tip.style.display='none';cross.setAttribute('opacity',0);};
+  svg.addEventListener('mousemove',show);svg.addEventListener('mouseleave',hide);svg.addEventListener('touchstart',show,{passive:false});svg.addEventListener('touchmove',show,{passive:false});svg.addEventListener('touchend',hide);
+}
+
+function renderPositions(R){
+  const box=$('barChart'); box.querySelectorAll('svg').forEach(s=>s.remove());
+  const subs=R.subs.slice().sort((a,b)=>b.pnl-a.pnl); const W=Math.max(300,box.clientWidth); const rowH=26,m={l:W<500?96:170,r:80,t:6,b:6}; const H=m.t+m.b+rowH*subs.length;
+  const maxAbs=Math.max(1,...subs.map(s=>Math.abs(s.pnl))); const cx=m.l+(W-m.l-m.r)/2; const sc=(W-m.l-m.r)/2/maxAbs;
+  const svg=svgEl('svg',{viewBox:'0 0 '+W+' '+H,width:W,height:H,role:'img','aria-label':'銘柄別損益'});
+  svg.appendChild(svgEl('line',{x1:cx,x2:cx,y1:m.t,y2:H-m.b,stroke:'var(--line)'}));
+  subs.forEach((s,i)=>{const yy=m.t+i*rowH+4; const w=Math.abs(s.pnl)*sc; const xx=s.pnl>=0?cx:cx-w; svg.appendChild(svgEl('rect',{x:xx,y:yy,width:Math.max(w,1),height:rowH-8,fill:s.pnl>=0?'var(--up)':'var(--down)',rx:3}));
+    const nm=svgEl('text',{x:m.l-8,y:yy+13,'text-anchor':'end','class':'lab-ja'},s.name.length>8&&W<500?s.name.slice(0,7)+'…':s.name); nm.style.fill='var(--fg)'; svg.appendChild(nm);
+    const vl=svgEl('text',{x:s.pnl>=0?cx+w+6:cx+6,y:yy+13,'text-anchor':'start'},fmtSYen(s.pnl)); vl.style.fill='var(--fg)'; svg.appendChild(vl);});
+  box.appendChild(svg);
+  const tb=document.querySelector('#posTbl tbody'); tb.innerHTML='';
+  R.subs.forEach(s=>{const tr=document.createElement('tr'); const sold=s.exitPx!==null; const px2=sold?s.exitPx:s.lastPx; const bought=s.buyPx!==null;
+    const mark=s.status==='保有中'?'<span class="mark hold">保有中</span>':s.status==='利確'?'<span class="mark up">利確</span>':s.status==='損切り'?'<span class="mark dn">損切り</span>':s.status==='売却'?'<span class="mark gold">売却</span>':'<span class="mark hold">'+s.status+'</span>';
+    const n=s.events.length?s.events[0].n:0;
+    tr.innerHTML='<td>'+s.name+'<span class="sub">'+s.code+'・'+(D.stocks[s.code].sector||'')+'</span></td><td class="num">'+(bought?n.toLocaleString('ja-JP')+'株':'—')+'</td><td class="num">'+(bought?s.buyPx.toLocaleString('ja-JP'):'—')+'</td><td class="num">'+px2.toLocaleString('ja-JP')+'</td><td class="num '+(s.pnl>=0?'pos':'neg')+'">'+fmtSYen(s.pnl)+'</td><td class="num '+(s.pnl>=0?'pos':'neg')+'">'+fmtPct(s.pnl/s.B)+'</td><td>'+mark+'</td>';
+    tb.appendChild(tr);});
+}
+
+function renderLog(R){
+  const tb=document.querySelector('#logTbl tbody'); tb.innerHTML='';
+  $('logHint').textContent=R.events.length+'件';
+  R.events.forEach(e=>{const tr=document.createElement('tr'); const isSell=/売|利確|損切/.test(e.act);
+    tr.innerHTML='<td class="num">'+isoJa(D.dates[e.t],false)+'</td><td>'+e.name+(e.code?'<span class="sub">'+e.code+'</span>':'')+'</td><td>'+(isSell?'<span class="mark '+(e.pnl>0?'up':e.pnl<0?'dn':'gold')+'">'+e.act+'</span>':'<span class="mark hold">'+e.act+'</span>')+'</td><td class="num">'+(e.n!=null?e.n.toLocaleString('ja-JP'):'—')+'</td><td class="num">'+(e.px!=null?e.px.toLocaleString('ja-JP'):'—')+'</td><td class="num">'+fmtYen(e.amt)+'</td><td class="num '+(e.pnl>0?'pos':e.pnl<0?'neg':'')+'">'+(e.pnl!=null?fmtSYen(e.pnl):'')+'</td>';
+    tb.appendChild(tr);});
+}
+
+function renderCompare(cfg,i0){
+  const tb=document.querySelector('#cmpTbl tbody'); tb.innerHTML='';
+  const save=state.pick;
+  PICKS.forEach(p=>{ if(p.id==='custom'&&!state.custom.length) return; state.pick=p.id; const codes=pickCodes(i0); const tr=document.createElement('tr'); let html='<td>'+p.name+'</td>';
+    ['hold','tpsl','ma'].forEach(rule=>{const r=runPortfolio(codes,Object.assign({},cfg,{rule})); const pnl=r.final-START; html+='<td class="num '+(pnl>=0?'pos':'neg')+(p.id===save&&rule===cfg.rule?' cur':'')+'">'+fmtYen(r.final)+'<span class="sub">'+fmtPct(pnl/START)+'</span></td>';});
+    tr.innerHTML=html; tb.appendChild(tr); });
+  state.pick=save;
+}
+
+function renderForward(codes,cfg){
+  const f=forward(codes,cfg); if(!f){$('fHit').textContent='—';return;}
+  $('fHit').textContent=fmtP(f.hit); $('fP10').textContent=fmtP(f.p10); $('fMed').textContent=fmtMan(f.median*START); $('fMedSub').textContent='下位5% '+fmtMan(f.p5*START)+' ／ 上位5% '+fmtMan(f.p95*START); $('fRuin').textContent=fmtP(f.ruin);
+}
+
+/* ---------- 初期化 ---------- */
+function init(data){
+  D=data;
+  $('metaRange').textContent=D.dates[0].replace(/-/g,'/')+'〜'+D.dates[D.dates.length-1].slice(5).replace(/-/g,'/');
+  $('metaUpd').textContent=(D.updated||'').replace('T',' ').slice(0,16);
+  const pc=$('pickChips'); PICKS.forEach(p=>{const b=document.createElement('button');b.type='button';b.className='chip';b.dataset.id=p.id;b.textContent=p.name;b.addEventListener('click',()=>{state.pick=p.id;recalc();});pc.appendChild(b);});
+  const cl=$('customList'); const order={value:0,momentum:1,highvol:2,large:3};
+  Object.keys(D.stocks).sort((a,b)=>order[D.stocks[a].group]-order[D.stocks[b].group]).forEach(code=>{const b=document.createElement('button');b.type='button';b.className='chip';b.dataset.code=code;b.textContent=D.stocks[code].name+' '+code;b.addEventListener('click',()=>{const i=state.custom.indexOf(code); if(i>=0)state.custom.splice(i,1); else if(state.custom.length<10)state.custom.push(code); recalc();});cl.appendChild(b);});
+  document.querySelectorAll('#ruleSeg button').forEach(b=>b.addEventListener('click',()=>{state.rule=b.dataset.rule;recalc();}));
+  document.querySelectorAll('#lotSeg button').forEach(b=>b.addEventListener('click',()=>{state.lot=b.dataset.lot;recalc();}));
+  $('tp').addEventListener('input',()=>{state.tp=$('tp').value/100;recalc();}); $('sl').addEventListener('input',()=>{state.sl=$('sl').value/100;recalc();});
+  $('lev').addEventListener('input',()=>{state.L=parseFloat($('lev').value);recalc();}); $('days').addEventListener('input',()=>{state.N=parseInt($('days').value,10);recalc();});
+  $('startDate').min=D.dates[25]; $('startDate').max=D.dates[D.dates.length-2];
+  $('startDate').addEventListener('change',()=>{state.start=$('startDate').value;recalc();});
+  const sc=$('startChips'); [['2026-09-25','1か月前（9/25）'],['2026-08-25','2か月前（8/25）'],['2026-07-24','3か月前（7/24）'],['2026-06-25','4か月前（6/25）']].forEach(([iso,l])=>{const b=document.createElement('button');b.type='button';b.className='chip small';b.dataset.iso=iso;b.textContent=l;b.addEventListener('click',()=>{state.start=iso;recalc();});sc.appendChild(b);});
+  state.custom=['7203','6758','4475','5932','3103'];
+  recalc();
+  let rto=null; window.addEventListener('resize',()=>{clearTimeout(rto);rto=setTimeout(recalc,150);});
+}
+const embedded=JSON.parse(document.getElementById('data').textContent);
+if(embedded){ init(embedded); }
+else {
+  Promise.all([fetch('paper_prices.json').then(r=>r.json()),fetch('data.json').then(r=>r.json()),fetch('stocks.json').then(r=>r.json()).catch(()=>({stocks:{}}))]).then(([pp,dj,sj])=>{
+    const dates=null; let first=null; const stocks={};
+    for(const code in pp.stocks){const v=pp.stocks[code]; if(!first) first=v.rows.map(r=>r[0]); stocks[code]={name:v.name,group:v.group,sector:v.sector,o:v.rows.map(r=>r[1]),h:v.rows.map(r=>r[2]),l:v.rows.map(r=>r[3]),c:v.rows.map(r=>r[4])};}
+    const m={}; dj.series.n225.rows.forEach(r=>{m[r[0]]=r[1];}); let lastN=null; const n225=first.map(d=>{if(m[d]!=null)lastN=m[d];return lastN;});
+    for(const code in stocks){ const q=(sj.stocks||{})[code]; if(q) Object.assign(stocks[code],{score:q.score,pbr:q.pbr,per:q.per,div:q.div,mc:q.mc,market:q.m,sc:q.sc}); }
+    init({updated:pp.updated,dates:first,n225,stocks});
+  }).catch(e=>{ document.querySelector('.wrap').insertAdjacentHTML('afterbegin','<p class="loading">データを読み込めませんでした：'+e+'</p>'); });
+}
+})();
+</script>
